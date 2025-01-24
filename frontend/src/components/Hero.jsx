@@ -4,34 +4,37 @@ import Button from './Button'
 
 const Hero = () => {
   return (
-    <div className='flex flex-col sm:flex-row  bg-black text-white'> {/* Hero Left Side */}
-    <div className='w-full sm:w-1/2 flex items-center justify-center py-10 sm:py-0'>
-      <div className='text-[#f1f0f0]'>
-        <div className='flex items-center gap-2'>
-          <p className='w-8 md:w-11 h-[2px] bg-[#ffffff]'></p>
-          <p className='font-medium text-sm md:text-base'>SEE AND BE SEEN</p>
+    <div className='flex flex-col sm:flex-row bg-black text-white min-h-[80vh]'>
+      <div className='w-full sm:w-1/2 flex items-center justify-center p-10'>
+        <div className='text-[#f1f0f0] max-w-lg'>
+          <div className='flex items-center gap-2 mb-4'>
+            <p className='w-12 h-[2px] bg-[#ffffff]'></p>
+            <p className='font-medium text-lg'>LUXURY EYEWEAR</p>
+          </div>
+          <h1 className='text-5xl sm:text-6xl font-bold mb-6'>
+            DISCOVER YOUR
+            <br />
+            PERFECT STYLE
+          </h1>
+          <p className='text-gray-300 mb-8'>
+            Explore our curated collection of designer frames and premium eyewear.
+            Find the perfect match for your unique style.
+          </p>
+          <Button />
         </div>
-        <h1 className='text-3xl sm:py-3 lg:text-5xl leading-relaxed' style={{ fontFamily: 'Cutefont, sans-serif' }}>
-  RE-INVENT
-  <div className='flex items-center gap-2'>
-    <p className='font-semibold text-sm md:text-base'>SHOP NOW</p>
-    <p className='w-8 md:w-11 h-[1px] bg-[#fffefe]'></p>
-  </div>
-</h1>
-
-        <br/>
-        <Button/>
       </div>
-       
+      <div className='w-full sm:w-1/2 relative'>
+        <img 
+          className='w-full h-full object-cover' 
+          src={assets.hero_img} 
+          alt="Luxury Eyewear" 
+        />
+        <div className='absolute bottom-8 right-8 bg-white/10 backdrop-blur-md p-4 rounded-lg'>
+          <p className='text-2xl font-bold'>20% OFF</p>
+          <p className='text-sm'>On First Purchase</p>
+        </div>
+      </div>
     </div>
-
-    {/* Hero Right Side */}
-    <img className='w-full sm:w-1/2' src={assets.hero_img} alt="" />
-  
- 
-  </div>
-
-  
   )
 }
 
