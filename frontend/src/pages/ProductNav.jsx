@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { FiFilter } from 'react-icons/fi';
 
 function ProductNav() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [order, setOrder] = useState(searchParams.get("order") || "");
   const [showFilters, setShowFilters] = useState(false);
+  const location = useLocation();
   
   // Get filter values from URL params
   const selectedColors = searchParams.getAll("color");
@@ -29,6 +30,16 @@ function ProductNav() {
       { label: "Rs. 10,000 - Rs. 20,000", value: "10000-20000" },
       { label: "Over Rs. 20,000", value: "20000+" }
     ]
+  };
+
+  // Function to get current category from path
+  const getCurrentCategory = () => {
+    const path = location.pathname;
+    if (path.includes('sunglasses')) return 'SUNGLASSES';
+    if (path.includes('eyeglasses')) return 'EYEGLASSES';
+    if (path.includes('contactlens')) return 'CONTACT LENSES';
+    if (path.includes('collection')) return 'COLLECTION';
+    return '';
   };
 
   const handleFilterChange = (type, value) => {
@@ -60,7 +71,7 @@ function ProductNav() {
   };
 
   return (
-    <div className="sticky top-0 z-20">
+    <div className="sticky top-[64px] z-10">
       {/* Main Navigation Bar */}
       <div className="bg-gray-100 h-16 px-4 flex items-center justify-between border-b">
         <div className="flex items-center gap-4">
@@ -72,7 +83,7 @@ function ProductNav() {
             Filters
           </button>
           <h1 className="text-gray-600 font-light hidden md:block">
-            {showFilters ? "Select Filters" : "SUNGLASSES"}
+            {showFilters ? "Select Filters" : getCurrentCategory()}
           </h1>
         </div>
 
@@ -91,8 +102,8 @@ function ProductNav() {
 
       {/* Filter Sidebar */}
       {showFilters && (
-        <div className="fixed inset-0 z-30 flex">
-          <div className="w-80 bg-white h-full overflow-y-auto shadow-lg p-4">
+        <div className="fixed inset-0 z-40 flex mt-[64px]">
+          <div className="w-80 bg-white h-[calc(100vh-64px)] overflow-y-auto shadow-lg p-4">
             {/* Price Range */}
             <div className="mb-6">
               <h3 className="font-semibold mb-3">Price Range</h3>

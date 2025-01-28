@@ -1,95 +1,103 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const [loginData, setLoginData] = useState({
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState(""); // State for error/success message
-  const [messageType, setMessageType] = useState(""); // State for message type (success/error)
-  const navigate = useNavigate(); // Initialize useNavigate
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setLoginData({ ...loginData, [name]: value });
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  const handleLogin = async () => {
     try {
-      // Send login data to backend API
-      const response = await axios.post("http://localhost:5000/api/login", loginData);
-
-      if (response.status === 200) {
-        setMessage("Login successful!");
-        setMessageType("success"); // Set message type to success
-
-        console.log("User Data:", response.data);
-
-        // Redirect to Home after successful login
-        navigate("/");
+      // Make direct API call first
+      const response = await axios.post("http://localhost:5001/api/auth/login", formData);
+      
+      if (response.data.success) {
+        // Store token
+        localStorage.setItem("token", response.data.token);
+        
+        // Update auth context
+        await login(formData.email, formData.password);
+        
+        // Navigate based on role
+        if (response.data.user.role === "admin") {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/");
+        }
       }
     } catch (error) {
-      console.error("Error during login:", error);
-      setMessage("Login failed. Please check your email and password.");
-      setMessageType("error"); // Set message type to error
+      console.error("Login error:", error);
+      setError(
+        error.response?.data?.message || 
+        "Invalid email or password"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="bg-white p-6 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-semibold mb-4 text-center">Log In</h2>
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="max-w-md w-full px-6">
+        <h2 className="text-2xl font-semibold text-center mb-8">
+          Login
+        </h2>
 
-        {/* Display success or error message */}
-        {message && (
-          <div
-            className={`p-2 mb-4 text-center rounded-md ${
-              messageType === "success" ? "bg-green-200 text-green-700" : "bg-red-200 text-red-700"
-            }`}
-          >
-            {message}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          )}
+
+          <div>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="Email"
+              className="w-full px-3 py-2 border-b border-gray-300 focus:border-red-500 outline-none"
+              required
+            />
           </div>
-        )}
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={loginData.email}
-          onChange={handleChange}
-          className="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            value={loginData.password}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="Password"
+              className="w-full px-3 py-2 border-b border-gray-300 focus:border-red-500 outline-none"
+              required
+            />
+          </div>
+
           <button
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute top-2 right-2 text-gray-500 hover:text-black"
+            type="submit"
+            disabled={loading}
+            className={`w-full py-2 text-white rounded-sm ${
+              loading ? "bg-red-400" : "bg-red-600 hover:bg-red-700"
+            } transition-colors`}
           >
-            {showPassword ? "Hide" : "Show"}
+            {loading ? "Logging in..." : "Login"}
           </button>
-        </div>
-        <button
-          onClick={handleLogin}
-          className="w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700"
-        >
-          Log In
-        </button>
-        <p className="mt-4 text-sm text-center">
-          New to Opera?{" "}
-          <a href="/signup" className="text-blue-500 hover:underline">
-            Sign Up
-          </a>
-        </p>
+
+          <p className="text-center text-sm text-gray-600">
+            Don't have an account?{" "}
+            <Link to="/signup" className="text-red-600 hover:text-red-700">
+              Sign up
+            </Link>
+          </p>
+        </form>
       </div>
     </div>
   );

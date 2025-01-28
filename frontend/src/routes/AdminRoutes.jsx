@@ -1,27 +1,58 @@
 import React from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
-import AdminNavbar from '../AdminPage/AdminNavbar';
-import AdminDashboard from '../AdminPage/AdminDashboard';
-import AdminProducts from '../AdminPage/AdminProducts';
-import AdminSettings from '../AdminPage/AdminSettings';
-import AdminLogin from '../AdminPage/AdminLogin';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import AdminLayout from '../layouts/AdminLayout';
+import AdminLogin from '../pages/admin/AdminLogin';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import AdminProducts from '../pages/admin/AdminProducts';
+import AdminOrders from '../pages/admin/AdminOrders';
+import AdminUsers from '../pages/admin/AdminUsers';
+import AdminSettings from '../pages/admin/AdminSettings';
+import { useAuth } from '../context/AuthContext';
 
 const AdminRoutes = () => {
-  const location = useLocation(); // Get the current location to check if we are on the login page
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-red-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      {/* Conditionally render the Navbar only if the route is not "/admin/login" */}
-      {location.pathname !== '/admin/login' && <AdminNavbar />}
+    <Routes>
+      {/* Public admin route */}
+      <Route 
+        path="login" 
+        element={
+          user?.role === 'admin' ? 
+            <Navigate to="/admin/dashboard" replace /> : 
+            <AdminLogin />
+        } 
+      />
 
-      <Routes>
-  <Route path="dashboard" element={<AdminDashboard />} />
-  <Route path="products" element={<AdminProducts />} />
-  <Route path="settings" element={<AdminSettings />} />
-  <Route path="login" element={<AdminLogin />} />
-</Routes>
+      {/* Protected admin routes - redirect to login if not admin */}
+      <Route
+        element={
+          user?.role === 'admin' ? (
+            <AdminLayout />
+          ) : (
+            <Navigate to="/admin/login" replace />
+          )
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="products" element={<AdminProducts />} />
+        <Route path="orders" element={<AdminOrders />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="settings" element={<AdminSettings />} />
+      </Route>
 
-    </div>
+      {/* Catch all route */}
+      <Route path="*" element={<Navigate to="/admin/login" replace />} />
+    </Routes>
   );
 };
 

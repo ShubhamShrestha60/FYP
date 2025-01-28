@@ -17,6 +17,7 @@ import Prescription from "../pages/Prescription";
 import Signup from "../pages/Signup";
 import Frame from "../components/Frame1";
 import ProductNav from "../pages/ProductNav";
+import Payment from "../Products/Payment";
 
 //For admin part 
 
@@ -32,6 +33,7 @@ const AllRoutes = () => {
       <Route path="/product/:productId" element={<Product />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/place-order" element={<PlaceOrder />} />
       <Route path="/orders" element={<Orders />} />
       <Route path="/sunglasses" element={<Sunglasses />} />
@@ -39,10 +41,9 @@ const AllRoutes = () => {
       <Route path="/prescription" element={<Prescription />} />
       <Route path="/contactlens" element={<ContactLens />} />
       <Route path="/tryon" element={<TryOn />} />
-      <Route path="/signup" element={<Signup />} />
       <Route path="/frame" element={<Frame />} />
       <Route path='/pronav' element={<ProductNav/>}/>
-      
+      <Route path='/payment' element={<Payment/>}/>
     </Routes>
   );
 };

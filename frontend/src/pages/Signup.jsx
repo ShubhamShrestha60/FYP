@@ -1,95 +1,126 @@
 import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios"; // Import axios
+import { useAuth } from "../context/AuthContext";
 
 const Signup = () => {
-  const [signupData, setSignupData] = useState({
-    name: "", // Full name from user input
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
+    phone: ""
   });
-  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setSignupData({ ...signupData, [name]: value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
-  const handleSignup = async () => {
-    // Split the 'name' into 'firstName' and 'lastName'
-    const [firstName, lastName] = signupData.name.split(" ");
-
-    const dataToSend = {
-      firstName, // Pass first name to backend
-      lastName,  // Pass last name to backend
-      email: signupData.email,
-      password: signupData.password,
-    };
-
-    console.log("Signup Data:", dataToSend);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      // Send data to backend API (replace 'your-api-url' with your actual backend URL)
-      const response = await axios.post("http://localhost:5000/api/signup", dataToSend);
-      
-      // Assuming the backend sends a success message
-      if (response.status === 201) {
-        alert("Signup successful!");
+      // Validate form data
+      if (!formData.name || !formData.email || !formData.password || !formData.phone) {
+        throw new Error("Please fill in all fields");
+      }
+
+      // Make signup request
+      const response = await axios.post("http://localhost:5001/api/auth/signup", formData);
+
+      if (response.data.success) {
+        // Auto login after successful signup
+        await login(formData.email, formData.password);
+        navigate("/");
       }
     } catch (error) {
-      // Handle any errors that occur during the request
-      console.error("Error during signup:", error);
-      alert("Signup failed. Please try again.");
+      setError(error.response?.data?.message || "Signup failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="bg-white p-6 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-semibold mb-4 text-center">Sign Up</h2>
-        <input
-          type="text"
-          name="name"
-          placeholder="Name"
-          value={signupData.name}
-          onChange={handleChange}
-          className="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={signupData.email}
-          onChange={handleChange}
-          className="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            value={signupData.password}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="max-w-md w-full px-6">
+        <h2 className="text-2xl font-semibold text-center mb-8">
+          Create Account
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          )}
+
+          <div>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Full Name"
+              className="w-full px-3 py-2 border-b border-gray-300 focus:border-red-500 outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="Email"
+              className="w-full px-3 py-2 border-b border-gray-300 focus:border-red-500 outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="Password"
+              className="w-full px-3 py-2 border-b border-gray-300 focus:border-red-500 outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="Phone Number"
+              className="w-full px-3 py-2 border-b border-gray-300 focus:border-red-500 outline-none"
+              required
+            />
+          </div>
+
           <button
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute top-2 right-2 text-gray-500 hover:text-black"
+            type="submit"
+            disabled={loading}
+            className={`w-full py-2 text-white rounded-sm ${
+              loading ? 'bg-red-400' : 'bg-red-600 hover:bg-red-700'
+            } transition-colors`}
           >
-            {showPassword ? "Hide" : "Show"}
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
-        </div>
-        <button
-          onClick={handleSignup}
-          className="w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700"
-        >
-          Sign Up
-        </button>
-        <p className="mt-4 text-sm text-center">
-          Already have an account?{" "}
-          <a href="/login" className="text-blue-500 hover:underline">
-            Sign In
-          </a>
-        </p>
+
+          <p className="text-center text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="text-red-600 hover:text-red-700">
+              Login
+            </Link>
+          </p>
+        </form>
       </div>
     </div>
   );

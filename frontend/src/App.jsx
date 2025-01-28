@@ -1,47 +1,35 @@
 import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
-import AdminRoutes from './routes/AdminRoutes'; // For admin pages
-import Navbar from './components/Navbar'; // For non-admin pages
-import Frame from './components/Frame1';
-import AllRoutes from './routes/AllRoutes'; // Other routes for non-admin
+import { Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ProductProvider } from './context/ProductContext';
+import AdminRoutes from './routes/AdminRoutes';
+import PublicLayout from './layouts/PublicLayout';
+import AllRoutes from './routes/AllRoutes';
 import ProductNav from './pages/ProductNav';
 import Footer from './components/Footer';
+import AdminDashboard from './components/admin/AdminDashboard';
+import ProductManagement from './components/admin/ProductManagement';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import CreateAdmin from './pages/CreateAdmin';
 
 const App = () => {
-  const location = useLocation();
-  
-  // Array of paths where Frame should be shown
-  const showFramePaths = ['/', '/home'];
-  
-  // Check if current path should show frame
-  const shouldShowFrame = showFramePaths.includes(location.pathname);
-
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-white">
-      <div>
-        <Navbar />
-        <main>
-          <Routes>
-            {/* Admin Routes */}
-            <Route path="/admin/*" element={<AdminRoutes />} />
-            
-            {/* Non-admin Routes */}
+    <AuthProvider>
+      <ProductProvider>
+        <Routes>
+          {/* Admin Routes - completely separate from public layout */}
+          <Route path="/admin/*" element={<AdminRoutes />} />
+          
+          {/* Public Routes - with public layout */}
+          <Route element={<PublicLayout />}>
             <Route path="/*" element={<AllRoutes />} />
-          </Routes>
-        </main>
-      </div>
-      
-      {/* Frame section - only shown on specified paths */}
-      {shouldShowFrame && (
-        <div className="bg-red-700">
-          <div className="flex items-center justify-center">
-            <Frame />
-          </div>
-        </div>
-      )}
+          </Route>
 
-      <Footer />
-    </div>
+          {/* New route for CreateAdmin */}
+          <Route path="/create-admin" element={<CreateAdmin />} />
+        </Routes>
+      </ProductProvider>
+    </AuthProvider>
   );
 };
 
