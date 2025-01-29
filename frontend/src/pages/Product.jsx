@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useCart } from '../context/CartContext';
 
 const Product = () => {
   const { productId } = useParams();
@@ -8,6 +9,7 @@ const Product = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
@@ -25,18 +27,9 @@ const Product = () => {
     }
   };
 
-  const handleAddToCart = async () => {
-    try {
-      await axios.post('http://localhost:5001/api/cart', {
-        productId,
-        quantity
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      navigate('/cart');
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-    }
+  const handleAddToCart = () => {
+    addToCart(product, quantity);
+    alert('Product added to cart!');
   };
 
   if (loading) {
@@ -93,7 +86,7 @@ const Product = () => {
             <p className="text-xl text-gray-500">{product.brand}</p>
           </div>
 
-          <p className="text-2xl font-bold text-red-600">${product.price}</p>
+          <p className="text-2xl font-bold text-red-600">Rs.{product.price}</p>
 
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Description</h2>
@@ -133,12 +126,12 @@ const Product = () => {
 
             <button
               onClick={handleAddToCart}
-              disabled={product.stock === 0}
               className={`w-full py-3 px-8 rounded-md text-white ${
                 product.stock === 0
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-red-600 hover:bg-red-700'
               }`}
+              disabled={product.stock === 0}
             >
               {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
             </button>

@@ -129,7 +129,7 @@ const Sunglasses = () => {
                   selectedGender === 'women'
                     ? 'bg-red-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                }`} 
               >
                 Women
               </button>
