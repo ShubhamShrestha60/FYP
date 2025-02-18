@@ -7,6 +7,7 @@ const fs = require('fs');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
 
 dotenv.config();
 
@@ -28,11 +29,20 @@ if (!fs.existsSync('./uploads')){
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+// Add this to handle MongoDB errors
+mongoose.connection.on('error', err => {
+  console.error('MongoDB error:', err);
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

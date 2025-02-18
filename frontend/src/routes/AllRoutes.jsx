@@ -18,6 +18,7 @@ import Signup from "../pages/Signup";
 import Frame from "../components/Frame1";
 import ProductNav from "../pages/ProductNav";
 import Payment from "../Products/Payment";
+import Profile from "../pages/Profile";
 
 //For admin part 
 
@@ -44,6 +45,7 @@ const AllRoutes = () => {
       <Route path="/frame" element={<Frame />} />
       <Route path='/pronav' element={<ProductNav/>}/>
       <Route path='/payment' element={<Payment/>}/>
+      <Route path="/profile" element={<Profile />} />
     </Routes>
   );
 };

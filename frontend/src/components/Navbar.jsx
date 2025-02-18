@@ -2,13 +2,15 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { assets } from '../assets/assets';
-import { FiShoppingCart, FiSearch } from 'react-icons/fi';
+import { FiShoppingCart, FiSearch, FiUser } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const { getCartCount } = useCart();
+  const { user } = useAuth();
 
   return (
     <nav className="bg-black text-white sticky top-0 z-50">
@@ -75,18 +77,44 @@ const Navbar = () => {
                 Prescription
               </NavLink>
 
-              <NavLink 
-                to="/login"
-                className={({ isActive }) => 
-                  `px-6 py-2 rounded-full transition-all duration-300 mr-8 ${
-                    isActive 
-                      ? 'bg-red-500 text-white' 
-                      : 'border-2 border-white hover:bg-white hover:text-black'
-                  }`
-                }
-              >
-                Login
-              </NavLink>
+              <div className="flex items-center space-x-8">
+                <button onClick={() => setShowSearch(!showSearch)}>
+                  <FiSearch className="h-5 w-5 hover:text-red-500 transition-colors duration-300" />
+                </button>
+                
+                <Link to="/cart" className="relative">
+                  <FiShoppingCart className="h-5 w-5 hover:text-red-500 transition-colors duration-300" />
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {getCartCount()}
+                  </span>
+                </Link>
+
+                {user ? (
+                  <NavLink 
+                    to="/profile"
+                    className={({ isActive }) => `
+                      w-10 h-10 rounded-full border-2 border-white flex items-center justify-center
+                      hover:bg-white hover:text-black transition-all duration-300
+                      ${isActive ? 'bg-white text-black' : ''}
+                    `}
+                  >
+                    <FiUser className="w-5 h-5" />
+                  </NavLink>
+                ) : (
+                  <NavLink 
+                    to="/login"
+                    className={({ isActive }) => 
+                      `px-6 py-2 rounded-full transition-all duration-300 ${
+                        isActive 
+                          ? 'bg-red-500 text-white' 
+                          : 'border-2 border-white hover:bg-white hover:text-black'
+                      }`
+                    }
+                  >
+                    Login
+                  </NavLink>
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex-1 px-4">
@@ -98,18 +126,6 @@ const Navbar = () => {
               />
             </div>
           )}
-
-          <div className="flex items-center space-x-4">
-            <button onClick={() => setShowSearch(!showSearch)}>
-              <FiSearch className="h-5 w-5" />
-            </button>
-            <Link to="/cart" className="relative">
-              <FiShoppingCart className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                {getCartCount()}
-              </span>
-            </Link>
-          </div>
 
           <div className="md:hidden mr-4">
             <button className="p-2 hover:bg-gray-800 rounded-md transition-colors duration-300">
