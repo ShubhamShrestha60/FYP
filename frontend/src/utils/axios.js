@@ -1,21 +1,28 @@
 import axios from 'axios';
-import { API_BASE_URL } from '../config/config';
 
 const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'http://localhost:5001/api',
 });
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const isAdminRoute = config.url.startsWith('/admin') || config.url.startsWith('/products');
+    const token = isAdminRoute ? 
+      localStorage.getItem('adminToken') : 
+      localStorage.getItem('token');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Don't override Content-Type for FormData
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export default axiosInstance; 

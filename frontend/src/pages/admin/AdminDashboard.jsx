@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../../utils/axios';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -16,9 +16,7 @@ const AdminDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      const response = await axios.get('http://localhost:5001/api/admin/stats', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await axiosInstance.get('/admin/stats');
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);

@@ -98,15 +98,18 @@ router.delete('/:id', isAdmin, async (req, res) => {
 // Upload images (admin only)
 router.post('/upload', isAdmin, upload.array('images', 5), async (req, res) => {
   try {
-    if (!req.files) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    const urls = req.files.map(file => file.path);
-    res.json({ urls });
+    // For Cloudinary, the path property contains the full URL
+    const imageUrls = req.files.map(file => file.path);
+    console.log('Uploaded files to Cloudinary:', imageUrls);
+
+    res.json({ imageUrls });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ message: 'Error uploading images', error: error.message });
+    res.status(500).json({ message: 'Error uploading images' });
   }
 });
 

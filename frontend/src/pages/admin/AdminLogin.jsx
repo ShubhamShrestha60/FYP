@@ -19,12 +19,17 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const response = await login(formData.email, formData.password);
-      if (response.user.role !== 'admin') {
+      console.log('Attempting admin login...');
+      const response = await login(formData.email, formData.password, true);
+      console.log('Login response:', response);
+      
+      if (!response || !response.user || response.user.role !== 'admin') {
         throw new Error('Unauthorized access');
       }
+      console.log('Admin login successful, navigating to dashboard...');
       navigate('/admin/dashboard');
     } catch (error) {
+      console.error('Admin login error:', error);
       setError('Invalid admin credentials');
     } finally {
       setLoading(false);

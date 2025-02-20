@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 dotenv.config();
 
@@ -21,8 +22,8 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Create uploads directory if it doesn't exist
-if (!fs.existsSync('./uploads')){
-    fs.mkdirSync('./uploads');
+if (!fs.existsSync('./uploads')) {
+  fs.mkdirSync('./uploads');
 }
 
 // Routes
@@ -30,6 +31,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Add this after your routes are registered
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)

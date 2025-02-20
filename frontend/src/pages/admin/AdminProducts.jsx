@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import axiosInstance from '../../utils/axios';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -33,7 +34,7 @@ const AdminProducts = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5001/api/products');
+      const response = await axiosInstance.get('/products');
       setProducts(response.data);
     } catch (error) {
       toast.error('Error fetching products');
@@ -42,6 +43,22 @@ const AdminProducts = () => {
       setLoading(false);
     }
   };
+
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        await axiosInstance.delete(`/products/${id}`);
+        toast.success('Product deleted successfully');
+        fetchProducts(); // Refresh the products list
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        toast.error(error.response?.data?.message || 'Error deleting product');
+      }
+    }
+  };
+
+
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -64,33 +81,28 @@ const AdminProducts = () => {
   };
 
   const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    const formData = new FormData();
-    
-    files.forEach(file => {
-      formData.append('images', file);
-    });
-
     try {
       setLoading(true);
-      const response = await axios.post(
-        'http://localhost:5001/api/products/upload',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      const files = Array.from(e.target.files);
+      const formData = new FormData();
       
+      files.forEach(file => {
+        formData.append('images', file);
+      });
+
+      console.log('Admin token:', localStorage.getItem('adminToken')); // Debug log
+
+      const response = await axiosInstance.post('/products/upload', formData);
+      console.log('Upload response:', response); // Debug log
+
       setFormData(prev => ({
         ...prev,
-        images: [...prev.images, ...response.data.urls]
+        images: [...prev.images, ...response.data.imageUrls]
       }));
       toast.success('Images uploaded successfully');
     } catch (error) {
       console.error('Error uploading images:', error);
+      console.log('Error response:', error.response); // Debug log
       toast.error(error.response?.data?.message || 'Error uploading images');
     } finally {
       setLoading(false);
@@ -139,26 +151,18 @@ const AdminProducts = () => {
     };
 
     try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-
       if (selectedProduct) {
         // Update existing product
-        await axios.put(
-          `http://localhost:5001/api/products/${selectedProduct._id}`,
-          productData,
-          { headers }
+        await axiosInstance.put(
+          `/products/${selectedProduct._id}`,
+          productData
         );
         toast.success('Product updated successfully');
       } else {
         // Create new product
-        await axios.post(
-          'http://localhost:5001/api/products',
-          productData,
-          { headers }
+        await axiosInstance.post(
+          '/products',
+          productData
         );
         toast.success('Product added successfully');
       }

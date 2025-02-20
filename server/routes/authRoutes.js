@@ -88,39 +88,25 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Debug log
-    console.log('Login attempt for email:', email);
-
-    // Find user by email
     const user = await User.findOne({ email });
+
     if (!user) {
-      console.log('User not found');
-      return res.status(401).json({ 
-        success: false,
-        message: 'Invalid email or password' 
-      });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Compare password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      console.log('Invalid password');
-      return res.status(401).json({ 
-        success: false,
-        message: 'Invalid email or password' 
-      });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate token
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { 
+        userId: user._id,
+        role: user.role 
+      }, 
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-
-    // Debug log
-    console.log('Login successful for user:', user.email);
 
     res.json({
       success: true,
@@ -134,10 +120,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Login failed. Please try again.' 
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

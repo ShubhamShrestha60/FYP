@@ -35,9 +35,18 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'paid', 'failed'],
     default: 'pending'
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true
 });
 
-module.exports = mongoose.model('Order', orderSchema); 
+// Remove any existing model to avoid the OverwriteModelError
+mongoose.models = {};
+
+const Order = mongoose.model('Order', orderSchema);
+
+module.exports = Order; 

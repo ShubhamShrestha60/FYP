@@ -34,24 +34,31 @@ const isAdmin = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('No token provided in request:', req.headers);
       return res.status(401).json({ message: 'No authentication token, access denied' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Decoded admin token:', decoded);
+
     const user = await User.findById(decoded.userId);
+    console.log('Found user:', user);
 
     if (!user) {
+      console.log('User not found for ID:', decoded.userId);
       return res.status(401).json({ message: 'User not found' });
     }
 
     if (user.role !== 'admin') {
+      console.log('User is not admin. Role:', user.role);
       return res.status(403).json({ message: 'Admin access denied' });
     }
 
     req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Token is not valid' });
+    console.error('Admin auth error:', error);
+    res.status(401).json({ message: 'Token is not valid', error: error.message });
   }
 };
 

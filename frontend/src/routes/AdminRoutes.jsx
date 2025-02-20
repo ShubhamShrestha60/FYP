@@ -10,7 +10,7 @@ import AdminSettings from '../pages/admin/AdminSettings';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoutes = () => {
-  const { user, loading } = useAuth();
+  const { adminUser, loading } = useAuth();
 
   if (loading) {
     return (
@@ -26,22 +26,14 @@ const AdminRoutes = () => {
       <Route 
         path="login" 
         element={
-          user?.role === 'admin' ? 
+          adminUser?.role === 'admin' ? 
             <Navigate to="/admin/dashboard" replace /> : 
             <AdminLogin />
         } 
       />
 
-      {/* Protected admin routes - redirect to login if not admin */}
-      <Route
-        element={
-          user?.role === 'admin' ? (
-            <AdminLayout />
-          ) : (
-            <Navigate to="/admin/login" replace />
-          )
-        }
-      >
+      {/* Protected admin routes */}
+      <Route element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="products" element={<AdminProducts />} />

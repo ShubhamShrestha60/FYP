@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [adminUser, setAdminUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Add axios interceptor to handle token
@@ -15,7 +16,9 @@ export const AuthProvider = ({ children }) => {
       (error) => {
         if (error.response?.status === 401) {
           localStorage.removeItem('token');
+          localStorage.removeItem('adminToken');
           setUser(null);
+          setAdminUser(null);
         }
         return Promise.reject(error);
       }
@@ -24,19 +27,62 @@ export const AuthProvider = ({ children }) => {
     return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
+  useEffect(() => {
+    const requestInterceptor = axios.interceptors.request.use(
+      (config) => {
+        // Check if it's an admin route
+        const isAdminRoute = config.url?.includes('/admin') || false;
+        const token = isAdminRoute 
+          ? localStorage.getItem('adminToken')
+          : localStorage.getItem('token');
+        
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+    };
+  }, []);
+
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
+      const adminToken = localStorage.getItem('adminToken');
+
+      if (adminToken) {
+        // Check admin token first
+        const adminResponse = await axios.get(`${API_BASE_URL}/auth/verify`, {
+          headers: { Authorization: `Bearer ${adminToken}` }
+        });
+        if (adminResponse.data.user.role === 'admin') {
+          setAdminUser(adminResponse.data.user);
+          setLoading(false);
+          return;
+        }
+      }
+
       if (token) {
+        // Check regular user token
         const response = await axios.get(`${API_BASE_URL}/auth/verify`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setUser(response.data.user);
+        if (response.data.user.role !== 'admin') {
+          setUser(response.data.user);
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.removeItem('token');
+      localStorage.removeItem('adminToken');
       setUser(null);
+      setAdminUser(null);
     } finally {
       setLoading(false);
     }
@@ -46,7 +92,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, isAdminLogin = false) => {
     try {
       const response = await axios.post('http://localhost:5001/api/auth/login', {
         email,
@@ -54,8 +100,22 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        setUser(response.data.user);
+        const { user, token } = response.data;
+        
+        if (isAdminLogin) {
+          if (user.role !== 'admin') {
+            throw new Error('Unauthorized access');
+          }
+          localStorage.removeItem('token');
+          localStorage.setItem('adminToken', token);
+          setUser(null);
+          setAdminUser(user);
+        } else {
+          localStorage.removeItem('adminToken');
+          localStorage.setItem('token', token);
+          setAdminUser(null);
+          setUser(user);
+        }
         return response.data;
       }
     } catch (error) {
@@ -64,13 +124,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
+  const logout = (isAdmin = false) => {
+    if (isAdmin) {
+      localStorage.removeItem('adminToken');
+      setAdminUser(null);
+    } else {
+      localStorage.removeItem('token');
+      setUser(null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      adminUser, 
+      loading, 
+      login, 
+      logout, 
+      checkAuth 
+    }}>
       {children}
     </AuthContext.Provider>
   );

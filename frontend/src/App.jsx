@@ -21,10 +21,10 @@ const App = () => {
       <AuthProvider>
         <ProductProvider>
           <Routes>
-            {/* Admin Routes - completely separate from public layout */}
+            {/* Admin Routes should come before the public routes */}
             <Route path="/admin/*" element={<AdminRoutes />} />
             
-            {/* Public Routes - with public layout */}
+            {/* Public Routes */}
             <Route element={<PublicLayout />}>
               <Route path="/*" element={<AllRoutes />} />
             </Route>
