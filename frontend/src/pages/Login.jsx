@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -13,28 +13,24 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      // Make direct API call first
       const response = await axios.post("http://localhost:5001/api/auth/login", formData);
       
       if (response.data.success) {
-        // Store token
         localStorage.setItem("token", response.data.token);
-        
-        // Update auth context
         await login(formData.email, formData.password);
-        
-        // Navigate based on role
-        if (response.data.user.role === "admin") {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/");
-        }
+        navigate("/");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -46,6 +42,22 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="max-w-md w-full px-6">
+          <h2 className="text-2xl font-semibold text-center mb-8">
+            Welcome, {user.name}!
+          </h2>
+          <p className="text-center">You are logged in.</p>
+          <Link to="/" className="text-red-600 hover:text-red-700">
+            Go to the landing page
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
