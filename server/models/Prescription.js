@@ -84,10 +84,16 @@ const prescriptionSchema = new mongoose.Schema({
       return date;
     }
   },
+  prescriptionImage: {
+    type: String,  // URL to stored image
+  },
   status: {
     type: String,
     enum: ['pending', 'verified', 'rejected'],
     default: 'pending'
+  },
+  verificationNotes: {
+    type: String
   },
   verifiedBy: {
     type: mongoose.Schema.Types.ObjectId,

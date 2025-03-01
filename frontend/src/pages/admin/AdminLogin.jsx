@@ -27,7 +27,7 @@ const AdminLogin = () => {
         throw new Error('Unauthorized access');
       }
       console.log('Admin login successful, navigating to dashboard...');
-      navigate('/admin/dashboard');
+      navigate('/admin');
     } catch (error) {
       console.error('Admin login error:', error);
       setError('Invalid admin credentials');

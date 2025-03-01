@@ -53,35 +53,18 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
       const adminToken = localStorage.getItem('adminToken');
-
       if (adminToken) {
-        // Check admin token first
         const adminResponse = await axios.get(`${API_BASE_URL}/auth/verify`, {
           headers: { Authorization: `Bearer ${adminToken}` }
         });
         if (adminResponse.data.user.role === 'admin') {
           setAdminUser(adminResponse.data.user);
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (token) {
-        // Check regular user token
-        const response = await axios.get(`${API_BASE_URL}/auth/verify`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.user.role !== 'admin') {
-          setUser(response.data.user);
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
       localStorage.removeItem('adminToken');
-      setUser(null);
       setAdminUser(null);
     } finally {
       setLoading(false);

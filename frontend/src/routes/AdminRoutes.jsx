@@ -7,6 +7,7 @@ import AdminProducts from '../pages/admin/AdminProducts';
 import AdminOrders from '../pages/admin/AdminOrders';
 import AdminUsers from '../pages/admin/AdminUsers';
 import AdminSettings from '../pages/admin/AdminSettings';
+import AdminPrescriptions from '../pages/admin/AdminPrescriptions';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoutes = () => {
@@ -40,6 +41,7 @@ const AdminRoutes = () => {
         <Route path="orders" element={<AdminOrders />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="prescriptions" element={<AdminPrescriptions />} />
       </Route>
 
       {/* Catch all route */}

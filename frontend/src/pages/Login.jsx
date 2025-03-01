@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, user } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
@@ -15,9 +16,10 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate("/");
+      const returnPath = location.state?.from || '/';
+      navigate(returnPath);
     }
-  }, [user, navigate]);
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

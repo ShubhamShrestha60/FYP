@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../../context/AuthContext';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -15,10 +16,14 @@ const AdminOrders = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5001/api/orders${filterStatus !== 'all' ? `?status=${filterStatus}` : ''}`);
+      const response = await axios.get('http://localhost:5001/api/orders/admin', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
       setOrders(response.data);
     } catch (error) {
-      toast.error('Error fetching orders');
+      toast.error('Failed to fetch orders');
     } finally {
       setLoading(false);
     }
@@ -68,9 +73,9 @@ const AdminOrders = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Orders Management</h1>
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Orders Management</h1>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}

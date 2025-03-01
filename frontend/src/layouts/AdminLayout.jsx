@@ -1,15 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminNavbar from '../components/admin/AdminNavbar';
 
-const AdminLayout = () => {
+const AdminLayout = ({ children }) => {
   const { adminUser, loading } = useAuth();
-
-  useEffect(() => {
-    console.log('AdminLayout - adminUser:', adminUser);
-    console.log('AdminLayout - loading:', loading);
-  }, [adminUser, loading]);
 
   if (loading) {
     return (
@@ -19,18 +14,16 @@ const AdminLayout = () => {
     );
   }
 
-  // Check if user is admin
   if (!adminUser || adminUser.role !== 'admin') {
-    console.log('Not admin, redirecting to login...');
     return <Navigate to="/admin/login" replace />;
   }
 
   return (
     <div className="min-h-screen bg-gray-100">
       <AdminNavbar />
-      <div className="container mx-auto px-4 py-8">
-        <Outlet />
-      </div>
+      <main className="container mx-auto px-4 py-8">
+        {children || <Outlet />}
+      </main>
     </div>
   );
 };

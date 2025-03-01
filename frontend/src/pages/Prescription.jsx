@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { FiUpload } from 'react-icons/fi';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -25,11 +26,12 @@ const Prescription = () => {
     pdDistance: '',
     prescriptionType: 'Single Vision'
   });
+  const [prescriptionImage, setPrescriptionImage] = useState(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
-      toast.error('Please login to access this page');
-      navigate('/login');
+      navigate('/login', { state: { from: '/prescription' } });
       return;
     }
     fetchPrescriptions();
@@ -37,10 +39,7 @@ const Prescription = () => {
 
   const fetchPrescriptions = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/prescriptions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API_BASE_URL}/prescriptions`);
       setSavedPrescriptions(response.data);
     } catch (error) {
       console.error('Error fetching prescriptions:', error);
@@ -57,19 +56,42 @@ const Prescription = () => {
     }));
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadLoading(true);
+    const formData = new FormData();
+    formData.append('prescriptionImage', file);
+
+    try {
+      console.log('Uploading prescription image...');
+      const response = await axios.post(
+        `${API_BASE_URL}/prescriptions/upload`, 
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      console.log('Upload response:', response.data);
+      setPrescriptionImage(response.data.imageUrl);
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Error uploading image');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Please login first');
-        navigate('/login');
-        return;
-      }
-
-      // Convert all values to numbers and validate
       const prescriptionData = {
         rightEye: {
           sphere: Number(prescription.rightEye.sphere),
@@ -82,10 +104,10 @@ const Prescription = () => {
           axis: Number(prescription.leftEye.axis)
         },
         pdDistance: Number(prescription.pdDistance),
-        prescriptionType: prescription.prescriptionType
+        prescriptionType: prescription.prescriptionType,
+        prescriptionImage: prescriptionImage
       };
 
-      // Validate numbers
       if (isNaN(prescriptionData.rightEye.sphere) || 
           isNaN(prescriptionData.rightEye.cylinder) || 
           isNaN(prescriptionData.rightEye.axis) ||
@@ -97,40 +119,32 @@ const Prescription = () => {
         return;
       }
 
-      console.log('Sending data:', prescriptionData);
-
       const response = await axios.post(
         `${API_BASE_URL}/prescriptions`,
         prescriptionData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }
       );
 
-      console.log('Server response:', response.data);
-
       if (response.data.success) {
         toast.success('Prescription saved successfully');
-        fetchPrescriptions(); // Refresh the list
-        // Reset form
+        fetchPrescriptions();
         setPrescription({
           rightEye: { sphere: '', cylinder: '', axis: '' },
           leftEye: { sphere: '', cylinder: '', axis: '' },
           pdDistance: '',
           prescriptionType: 'Single Vision'
         });
+        setPrescriptionImage(null);
       }
     } catch (error) {
       console.error('Full error:', error);
-      console.error('Error response:', error.response?.data);
-      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           'Failed to save prescription';
-      
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -261,6 +275,28 @@ const Prescription = () => {
           </div>
         </div>
 
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-4">Prescription Image</h2>
+          <div className="flex items-center space-x-4">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              id="prescription-image"
+            />
+            <label
+              htmlFor="prescription-image"
+              className="flex items-center px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50"
+            >
+              <FiUpload className="mr-2" />
+              Upload Prescription Image
+            </label>
+            {uploadLoading && <span>Uploading...</span>}
+            {prescriptionImage && <span className="text-green-600">Image uploaded successfully</span>}
+          </div>
+        </div>
+
         <button
           type="submit"
           disabled={loading}
@@ -279,7 +315,16 @@ const Prescription = () => {
           <div className="space-y-4">
             {savedPrescriptions.map((p, index) => (
               <div key={p._id} className="bg-white p-4 rounded-lg shadow">
-                <p className="font-semibold">Prescription {index + 1}</p>
+                <div className="flex justify-between items-center">
+                  <p className="font-semibold">Prescription {index + 1}</p>
+                  <span className={`px-3 py-1 rounded-full text-sm ${
+                    p.status === 'verified' ? 'bg-green-100 text-green-800' :
+                    p.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                  </span>
+                </div>
                 <p>Date: {new Date(p.createdAt).toLocaleDateString()}</p>
                 <div className="grid grid-cols-2 gap-4 mt-2">
                   <div>
@@ -297,6 +342,18 @@ const Prescription = () => {
                 </div>
                 <p className="mt-2">PD Distance: {p.pdDistance}</p>
                 <p>Type: {p.prescriptionType}</p>
+                {p.prescriptionImage && (
+                  <div className="mt-2">
+                    <a 
+                      href={p.prescriptionImage} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      View Prescription Image
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>

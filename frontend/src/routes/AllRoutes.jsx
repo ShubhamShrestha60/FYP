@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "../pages/Home";
 import Collection from "../pages/Collection";
 import About from "../pages/About";
@@ -19,12 +19,18 @@ import Frame from "../components/Frame1";
 import ProductNav from "../pages/ProductNav";
 import Payment from "../Products/Payment";
 import Profile from "../pages/Profile";
+import AdminPrescriptions from '../pages/admin/AdminPrescriptions';
+import AdminDashboard from "../components/admin/AdminDashboard";
+import AdminLogin from "../pages/admin/AdminLogin";
+import { useAuth } from "../context/AuthContext";
 
 //For admin part 
 
 
 
 const AllRoutes = () => {
+  const { adminUser } = useAuth();
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
@@ -46,6 +52,8 @@ const AllRoutes = () => {
       <Route path='/pronav' element={<ProductNav/>}/>
       <Route path='/payment' element={<Payment/>}/>
       <Route path="/profile" element={<Profile />} />
+      <Route path="/admin" element={adminUser ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
     </Routes>
   );
 };

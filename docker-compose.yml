@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_TRYON_SERVICE_URL=http://localhost:5000
+    depends_on:
+      - tryon-service
+
+  tryon-service:
+    build: ./tryon
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./tryon:/app
+    devices:
+      - /dev/video0:/dev/video0
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development

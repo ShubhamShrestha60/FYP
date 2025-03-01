@@ -21,16 +21,14 @@ const App = () => {
       <AuthProvider>
         <ProductProvider>
           <Routes>
-            {/* Admin Routes should come before the public routes */}
+            {/* Admin Routes should come first */}
             <Route path="/admin/*" element={<AdminRoutes />} />
+            <Route path="/create-admin" element={<CreateAdmin />} />
             
             {/* Public Routes */}
             <Route element={<PublicLayout />}>
               <Route path="/*" element={<AllRoutes />} />
             </Route>
-
-            {/* New route for CreateAdmin */}
-            <Route path="/create-admin" element={<CreateAdmin />} />
 
             {/* New route for Checkout */}
             <Route path="/checkout" element={<Checkout />} />

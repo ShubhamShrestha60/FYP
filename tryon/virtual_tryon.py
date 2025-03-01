@@ -17,100 +17,104 @@ class VirtualTryOn:
     for optical measurements and industry best practices
     """
     
-    def __init__(self):
-        # Initialize the main window
-        self.window = tk.Tk()
-        self.window.title("Opera Eye Wear Nepal - Virtual Try-On")
-        self.window.geometry("1600x1000")
-        
-        # Initialize logger
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
-        
-        # Updated professional color scheme
-        self.brand_colors = {
-            'primary': '#1B1B1B',     # Almost black
-            'secondary': '#C4B27D',   # Gold accent
-            'bg_light': '#FFFFFF',    # White
-            'bg_dark': '#F5F5F5',     # Light gray
-            'text_dark': '#1B1B1B',   # Almost black
-            'text_light': '#FFFFFF',  # White
-            'accent': '#E5E5E5',      # Light accent
-            'error': '#D64545'        # Error red
-        }
-        
-        self.window.configure(bg=self.brand_colors['bg_light'])
-        
-        # Add window icon
-        try:
-            self.window.iconbitmap('assets/icon.ico')
-        except:
-            pass
+    def __init__(self, headless=False):
+        # Skip GUI initialization if in headless mode
+        self.headless = headless
+        if not headless:
+            # Initialize the main window
+            self.window = tk.Tk()
+            self.window.title("Opera Eye Wear Nepal - Virtual Try-On")
+            self.window.geometry("1600x1000")
             
-        # Initialize MediaPipe with optimized settings
-        self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
-            static_image_mode=False,
-            max_num_faces=1,
-            min_detection_confidence=0.3,
-            min_tracking_confidence=0.3,
-            refine_landmarks=True
-        )
-        
-        # Add drawing utilities for debugging
-        self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_drawing_styles = mp.solutions.drawing_styles
+            # Initialize logger
+            logging.basicConfig(level=logging.INFO)
+            self.logger = logging.getLogger(__name__)
+            
+            # Updated professional color scheme
+            self.brand_colors = {
+                'primary': '#1B1B1B',     # Almost black
+                'secondary': '#C4B27D',   # Gold accent
+                'bg_light': '#FFFFFF',    # White
+                'bg_dark': '#F5F5F5',     # Light gray
+                'text_dark': '#1B1B1B',   # Almost black
+                'text_light': '#FFFFFF',  # White
+                'accent': '#E5E5E5',      # Light accent
+                'error': '#D64545'        # Error red
+            }
+            
+            self.window.configure(bg=self.brand_colors['bg_light'])
+            
+            # Add window icon
+            try:
+                self.window.iconbitmap('assets/icon.ico')
+            except:
+                pass
+            
+            # Initialize MediaPipe with optimized settings
+            self.mp_face_mesh = mp.solutions.face_mesh
+            self.face_mesh = self.mp_face_mesh.FaceMesh(
+                static_image_mode=False,
+                max_num_faces=1,
+                min_detection_confidence=0.3,
+                min_tracking_confidence=0.3,
+                refine_landmarks=True
+            )
+            
+            # Add drawing utilities for debugging
+            self.mp_drawing = mp.solutions.drawing_utils
+            self.mp_drawing_styles = mp.solutions.drawing_styles
 
-        # Define facial landmarks for glasses positioning
-        self.FACIAL_LANDMARKS_GLASSES = {
-            'nose_bridge': [168, 6, 197, 195, 5],
-            'left_eye': [33, 133, 157, 158, 159, 160, 161, 246],
-            'right_eye': [362, 263, 387, 388, 389, 390, 391, 466],
-            'face_oval': [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288],
-            'temple_points': [127, 356],  # Temple width measurement
-            'nose_contour': [168, 6, 197, 195, 5],  # Detailed nose bridge
-            'eye_corners': [33, 133, 362, 263],  # Eye corner points
-            'cheekbone_points': [123, 352]  # Facial width at cheekbones
-        }
-        
-        # Standard measurements in millimeters
-        self.STANDARD_MEASUREMENTS = {
-            'min_bridge_width': 14,
-            'max_bridge_width': 24,
-            'min_lens_width': 40,
-            'max_lens_width': 62,
-            'standard_temple_length': 140
-        }
+            # Define facial landmarks for glasses positioning
+            self.FACIAL_LANDMARKS_GLASSES = {
+                'nose_bridge': [168, 6, 197, 195, 5],
+                'left_eye': [33, 133, 157, 158, 159, 160, 161, 246],
+                'right_eye': [362, 263, 387, 388, 389, 390, 391, 466],
+                'face_oval': [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288],
+                'temple_points': [127, 356],  # Temple width measurement
+                'nose_contour': [168, 6, 197, 195, 5],  # Detailed nose bridge
+                'eye_corners': [33, 133, 362, 263],  # Eye corner points
+                'cheekbone_points': [123, 352]  # Facial width at cheekbones
+            }
+            
+            # Standard measurements in millimeters
+            self.STANDARD_MEASUREMENTS = {
+                'min_bridge_width': 14,
+                'max_bridge_width': 24,
+                'min_lens_width': 40,
+                'max_lens_width': 62,
+                'standard_temple_length': 140
+            }
 
-        # Load frames metadata and collections
-        self.frames_data = self._load_frames_metadata()
-        self.collections = {
-            'Sunglasses': self.load_images('sunglasses'),
-            'Eyeglasses': self.load_images('eyeglasses'),
-            'Sports': self.load_images('sports')
-        }
+            # Load frames metadata and collections
+            self.frames_data = self._load_frames_metadata()
+            self.collections = {
+                'Sunglasses': self.load_images('sunglasses'),
+                'Eyeglasses': self.load_images('eyeglasses'),
+                'Sports': self.load_images('sports')
+            }
+            
+            self.current_collection = 'Sunglasses'
+            self.current_frame_index = 0
+            
+            # Initialize UI elements
+            self.recommendation_label = None
+            self.frame_info_display = None
+            self.video_label = None
+            self.frame_info = None
+            
+            # Cache for smooth tracking
+            self.last_face_pos = None
+            self.last_rotation = 0
+            
+            # Add smoothing parameters
+            self.smoothing_factor = 0.7  # Adjust between 0 and 1 (higher = more smoothing)
+            self.last_frame_pos = None  # Store last frame position
+            self.last_frame_width = None  # Store last frame width
+            self.last_frame_angle = None  # Store last frame angle
+            
+            # Setup UI
+            self.setup_ui()
         
-        self.current_collection = 'Sunglasses'
-        self.current_frame_index = 0
-        
-        # Initialize UI elements
-        self.recommendation_label = None
-        self.frame_info_display = None
-        self.video_label = None
-        self.frame_info = None
-        
-        # Cache for smooth tracking
-        self.last_face_pos = None
-        self.last_rotation = 0
-        
-        # Add smoothing parameters
-        self.smoothing_factor = 0.7  # Adjust between 0 and 1 (higher = more smoothing)
-        self.last_frame_pos = None  # Store last frame position
-        self.last_frame_width = None  # Store last frame width
-        self.last_frame_angle = None  # Store last frame angle
-        
-        # Setup UI and start camera
-        self.setup_ui()
         self.cap = None
 
     def load_images(self, folder):
@@ -464,10 +468,15 @@ class VirtualTryOn:
             return background
 
     def start(self):
-        self.cap = cv2.VideoCapture(0)
-        self.update_frame_info()
-        self.process_video()
-        self.window.mainloop()
+        if self.headless:
+            # In headless mode, just initialize the camera
+            self.cap = cv2.VideoCapture(0)
+        else:
+            # In GUI mode, start the full UI
+            self.cap = cv2.VideoCapture(0)
+            self.update_frame_info()
+            self.process_video()
+            self.window.mainloop()
 
     def process_video(self):
         if self.cap is None or not self.cap.isOpened():
@@ -796,7 +805,67 @@ class VirtualTryOn:
         clearance = bridge_width - nose_width
         return MIN_CLEARANCE <= clearance <= MAX_CLEARANCE
 
-    # ... Add other measurement and validation methods ... 
+    def process_video_frame(self, frame, face_landmarks):
+        """Process a single video frame with face landmarks"""
+        h, w = frame.shape[:2]
+        
+        # Get key points
+        left_eye = (int(face_landmarks.landmark[33].x * w),
+                   int(face_landmarks.landmark[33].y * h))
+        right_eye = (int(face_landmarks.landmark[263].x * w),
+                    int(face_landmarks.landmark[263].y * h))
+        nose_top = (int(face_landmarks.landmark[168].x * w),
+                   int(face_landmarks.landmark[168].y * h))
+        nose_bottom = (int(face_landmarks.landmark[6].x * w),
+                     int(face_landmarks.landmark[6].y * h))
+        
+        # Calculate frame parameters
+        eye_distance = np.linalg.norm(np.array(left_eye) - np.array(right_eye))
+        current_width = int(eye_distance * 1.75)
+        current_x = int(nose_top[0] - current_width / 2)
+        
+        nose_height = nose_bottom[1] - nose_top[1]
+        current_y = int(nose_top[1] - nose_height * 5.0)
+        
+        current_angle = math.atan2(right_eye[1] - left_eye[1], 
+                                right_eye[0] - left_eye[0])
+
+        # Apply smoothing
+        if self.last_frame_pos is not None:
+            frame_x = int(self.last_frame_pos[0] * self.smoothing_factor + 
+                        current_x * (1 - self.smoothing_factor))
+            frame_y = int(self.last_frame_pos[1] * self.smoothing_factor + 
+                        current_y * (1 - self.smoothing_factor))
+            frame_width = int(self.last_frame_width * self.smoothing_factor + 
+                            current_width * (1 - self.smoothing_factor))
+            frame_angle = (self.last_frame_angle * self.smoothing_factor + 
+                         current_angle * (1 - self.smoothing_factor))
+        else:
+            frame_x = current_x
+            frame_y = current_y
+            frame_width = current_width
+            frame_angle = current_angle
+
+        # Update last positions
+        self.last_frame_pos = (frame_x, frame_y)
+        self.last_frame_width = frame_width
+        self.last_frame_angle = frame_angle
+
+        # Apply frame overlay
+        if self.collections[self.current_collection]:
+            current_frame = self.collections[self.current_collection][self.current_frame_index]
+            if current_frame['image'] is not None:
+                frame = self.overlay_frame(
+                    frame.copy(),
+                    current_frame['image'].copy(),
+                    frame_x,
+                    frame_y,
+                    frame_width,
+                    0,
+                    angle=frame_angle
+                )
+
+        return frame
 
 if __name__ == "__main__":
     app = VirtualTryOn()
