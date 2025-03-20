@@ -30,15 +30,30 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const requestInterceptor = axios.interceptors.request.use(
       (config) => {
-        // Check if it's an admin route
-        const isAdminRoute = config.url?.includes('/admin') || false;
-        const token = isAdminRoute 
-          ? localStorage.getItem('adminToken')
-          : localStorage.getItem('token');
-        
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        const userToken = localStorage.getItem('token');
+        const adminToken = localStorage.getItem('adminToken');
+
+        // For admin routes and admin prescription view
+        if (config.url?.includes('/admin') || 
+            (config.url?.includes('/prescriptions/admin'))) {
+          if (adminToken) {
+            config.headers.Authorization = `Bearer ${adminToken}`;
+          }
         }
+        // For user prescription routes
+        else if (config.url?.includes('/prescriptions')) {
+          if (userToken) {
+            config.headers.Authorization = `Bearer ${userToken}`;
+          }
+        }
+        // For all other routes
+        else {
+          const token = adminToken || userToken;
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        }
+
         return config;
       },
       (error) => {
@@ -53,6 +68,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
+      // Check admin token
       const adminToken = localStorage.getItem('adminToken');
       if (adminToken) {
         const adminResponse = await axios.get(`${API_BASE_URL}/auth/verify`, {
@@ -60,12 +76,28 @@ export const AuthProvider = ({ children }) => {
         });
         if (adminResponse.data.user.role === 'admin') {
           setAdminUser(adminResponse.data.user);
+          setUser(null); // Ensure user is null when admin is logged in
+        }
+      }
+
+      // Check user token
+      const userToken = localStorage.getItem('token');
+      if (userToken) {
+        const userResponse = await axios.get(`${API_BASE_URL}/auth/verify`, {
+          headers: { Authorization: `Bearer ${userToken}` }
+        });
+        if (userResponse.data.user.role !== 'admin') {
+          setUser(userResponse.data.user);
+          setAdminUser(null); // Ensure admin is null when user is logged in
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      // Clear tokens and state on error
       localStorage.removeItem('adminToken');
+      localStorage.removeItem('token');
       setAdminUser(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -77,7 +109,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, isAdminLogin = false) => {
     try {
-      const response = await axios.post('http://localhost:5001/api/auth/login', {
+      const endpoint = isAdminLogin ? 
+        `${API_BASE_URL}/auth/admin/login` : 
+        `${API_BASE_URL}/auth/login`;
+        
+      const response = await axios.post(endpoint, {
         email,
         password
       });
@@ -85,18 +121,17 @@ export const AuthProvider = ({ children }) => {
       if (response.data.success) {
         const { user, token } = response.data;
         
+        // Clear all existing tokens first
+        localStorage.removeItem('token');
+        localStorage.removeItem('adminToken');
+        setUser(null);
+        setAdminUser(null);
+        
         if (isAdminLogin) {
-          if (user.role !== 'admin') {
-            throw new Error('Unauthorized access');
-          }
-          localStorage.removeItem('token');
           localStorage.setItem('adminToken', token);
-          setUser(null);
           setAdminUser(user);
         } else {
-          localStorage.removeItem('adminToken');
           localStorage.setItem('token', token);
-          setAdminUser(null);
           setUser(user);
         }
         return response.data;

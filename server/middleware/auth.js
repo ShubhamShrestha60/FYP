@@ -2,28 +2,26 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 // Middleware to verify JWT token
-const auth = async (req, res, next) => {
+const auth = (req, res, next) => {
   try {
-    // Get token from header
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ message: 'No auth token found' });
+      return res.status(401).json({ message: 'No token provided' });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded token:', decoded);
-
-    // Set user info in request
-    req.user = {
-      id: decoded.userId,  // Make sure this matches the field name from your token
-      role: decoded.role
-    };
-
+    
+    // Set both user and user.id for consistency
+    req.user = decoded;
+    req.user.id = decoded.userId;
+    
+    // Add role to request
+    req.user.role = decoded.role;
+    
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Auth error:', error);
     res.status(401).json({ message: 'Invalid token' });
   }
 };
@@ -34,31 +32,21 @@ const isAdmin = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      console.log('No token provided in request:', req.headers);
-      return res.status(401).json({ message: 'No authentication token, access denied' });
+      return res.status(401).json({ message: 'No authentication token' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded admin token:', decoded);
-
     const user = await User.findById(decoded.userId);
-    console.log('Found user:', user);
 
-    if (!user) {
-      console.log('User not found for ID:', decoded.userId);
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    if (user.role !== 'admin') {
-      console.log('User is not admin. Role:', user.role);
-      return res.status(403).json({ message: 'Admin access denied' });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
     }
 
     req.user = user;
     next();
   } catch (error) {
     console.error('Admin auth error:', error);
-    res.status(401).json({ message: 'Token is not valid', error: error.message });
+    res.status(401).json({ message: 'Invalid token' });
   }
 };
 

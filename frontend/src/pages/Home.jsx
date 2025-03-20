@@ -1,6 +1,7 @@
 import React from 'react'
 import Hero from '../components/Hero'
-import Collection from './Collection'
+import Frame from '../components/Frame1'
+import AnimatedFeatures from '../components/AnimatedFeatures'
 // import LatestCollection from '../components/LatestCollection'
 
 
@@ -9,9 +10,11 @@ const Home = () => {
     <div>
       <div>
       <Hero/>
+      <Frame/>
       
       </div>
       
+      <AnimatedFeatures />
   
     </div>
 
@@ -21,3 +24,4 @@ const Home = () => {
 }
 
 export default Home
+

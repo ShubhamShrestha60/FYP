@@ -17,10 +17,42 @@ class VirtualTryOn:
     for optical measurements and industry best practices
     """
     
-    def __init__(self, headless=False):
-        # Skip GUI initialization if in headless mode
-        self.headless = headless
-        if not headless:
+    def __init__(self, web_mode=False):
+        self.web_mode = web_mode
+        
+        # Initialize MediaPipe with optimized settings
+        self.mp_face_mesh = mp.solutions.face_mesh
+        self.face_mesh = self.mp_face_mesh.FaceMesh(
+            static_image_mode=False,
+            max_num_faces=1,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+            refine_landmarks=True
+        )
+        
+        # Initialize collections - moved outside of GUI initialization
+        self.collections = {
+            'Sunglasses': self.load_images('sunglasses'),
+            'Eyeglasses': self.load_images('eyeglasses'),
+            'Sports': self.load_images('sports')
+        }
+        self.current_collection = 'Sunglasses'
+        self.current_frame_index = 0
+        
+        # Initialize smoothing-related attributes
+        self.last_frame_pos = None
+        self.last_frame_width = None
+        self.last_frame_angle = None
+        self.smoothing_factor = 0.7
+        
+        # Initialize video capture
+        self.cap = None
+        
+        # Add image dimensions
+        self.image_width = 640  # Standard webcam width
+        self.image_height = 480  # Standard webcam height
+        
+        if not web_mode:
             # Initialize the main window
             self.window = tk.Tk()
             self.window.title("Opera Eye Wear Nepal - Virtual Try-On")
@@ -50,16 +82,6 @@ class VirtualTryOn:
             except:
                 pass
             
-            # Initialize MediaPipe with optimized settings
-            self.mp_face_mesh = mp.solutions.face_mesh
-            self.face_mesh = self.mp_face_mesh.FaceMesh(
-                static_image_mode=False,
-                max_num_faces=1,
-                min_detection_confidence=0.3,
-                min_tracking_confidence=0.3,
-                refine_landmarks=True
-            )
-            
             # Add drawing utilities for debugging
             self.mp_drawing = mp.solutions.drawing_utils
             self.mp_drawing_styles = mp.solutions.drawing_styles
@@ -87,30 +109,12 @@ class VirtualTryOn:
 
             # Load frames metadata and collections
             self.frames_data = self._load_frames_metadata()
-            self.collections = {
-                'Sunglasses': self.load_images('sunglasses'),
-                'Eyeglasses': self.load_images('eyeglasses'),
-                'Sports': self.load_images('sports')
-            }
-            
-            self.current_collection = 'Sunglasses'
-            self.current_frame_index = 0
             
             # Initialize UI elements
             self.recommendation_label = None
             self.frame_info_display = None
             self.video_label = None
             self.frame_info = None
-            
-            # Cache for smooth tracking
-            self.last_face_pos = None
-            self.last_rotation = 0
-            
-            # Add smoothing parameters
-            self.smoothing_factor = 0.7  # Adjust between 0 and 1 (higher = more smoothing)
-            self.last_frame_pos = None  # Store last frame position
-            self.last_frame_width = None  # Store last frame width
-            self.last_frame_angle = None  # Store last frame angle
             
             # Setup UI
             self.setup_ui()
@@ -123,9 +127,14 @@ class VirtualTryOn:
         folder_path = os.path.join('frames', folder)
         print(f"Loading frames from: {folder_path}")  # Debug print
         
-        if os.path.exists(folder_path):
-            for filename in os.listdir(folder_path):
-                if filename.endswith(('.png', '.jpg')):
+        if not os.path.exists(folder_path):
+            print(f"Warning: Folder not found - {folder_path}")
+            os.makedirs(folder_path, exist_ok=True)
+            return []
+        
+        for filename in os.listdir(folder_path):
+            if filename.endswith(('.png', '.jpg')):
+                try:
                     path = os.path.join(folder_path, filename)
                     print(f"Loading frame: {path}")  # Debug print
                     
@@ -146,8 +155,9 @@ class VirtualTryOn:
                         })
                     else:
                         print(f"Failed to load frame: {path}")
-        else:
-            print(f"Warning: Folder not found - {folder_path}")
+                except Exception as e:
+                    print(f"Error loading frame {filename}: {str(e)}")
+                    continue
         
         print(f"Total frames loaded for {folder}: {len(images)}")
         return images
@@ -468,11 +478,11 @@ class VirtualTryOn:
             return background
 
     def start(self):
-        if self.headless:
-            # In headless mode, just initialize the camera
-            self.cap = cv2.VideoCapture(0)
+        if self.web_mode:
+            if self.cap is None:
+                self.cap = cv2.VideoCapture(0)
         else:
-            # In GUI mode, start the full UI
+            # Original Tkinter start logic
             self.cap = cv2.VideoCapture(0)
             self.update_frame_info()
             self.process_video()
@@ -865,6 +875,35 @@ class VirtualTryOn:
                     angle=frame_angle
                 )
 
+        return frame
+
+    def stop(self):
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+
+    def get_frame(self):
+        if self.cap is None or not self.cap.isOpened():
+            return None
+
+        ret, frame = self.cap.read()
+        if not ret:
+            return None
+
+        # Resize frame to standard dimensions
+        frame = cv2.resize(frame, (self.image_width, self.image_height))
+        frame = cv2.flip(frame, 1)
+        
+        # Convert to RGB for MediaPipe
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Process with MediaPipe
+        results = self.face_mesh.process(rgb_frame)
+        
+        if results.multi_face_landmarks:
+            face_landmarks = results.multi_face_landmarks[0]
+            frame = self.process_video_frame(frame, face_landmarks)
+            
         return frame
 
 if __name__ == "__main__":

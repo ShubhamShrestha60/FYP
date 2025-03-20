@@ -16,18 +16,26 @@ const Prescription = () => {
     rightEye: {
       sphere: '',
       cylinder: '',
-      axis: ''
+      axis: '',
+      pd: ''
     },
     leftEye: {
       sphere: '',
       cylinder: '',
-      axis: ''
+      axis: '',
+      pd: ''
     },
-    pdDistance: '',
-    prescriptionType: 'Single Vision'
+    addition: '',
+    prescriptionType: 'Single Vision',
+    usage: 'Distance',
+    prescriptionDate: new Date().toISOString().split('T')[0]
   });
   const [prescriptionImage, setPrescriptionImage] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    prescriptionId: null
+  });
 
   useEffect(() => {
     if (!user) {
@@ -37,12 +45,30 @@ const Prescription = () => {
     fetchPrescriptions();
   }, [user, navigate]);
 
+  useEffect(() => {
+    console.log('Saved prescriptions updated:', savedPrescriptions);
+  }, [savedPrescriptions]);
+
   const fetchPrescriptions = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/prescriptions`);
+      console.log('Fetching prescriptions...');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/prescriptions`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      console.log('Fetched prescriptions:', response.data);
       setSavedPrescriptions(response.data);
     } catch (error) {
       console.error('Error fetching prescriptions:', error);
+      toast.error('Failed to fetch prescriptions');
     }
   };
 
@@ -96,52 +122,55 @@ const Prescription = () => {
         rightEye: {
           sphere: Number(prescription.rightEye.sphere),
           cylinder: Number(prescription.rightEye.cylinder),
-          axis: Number(prescription.rightEye.axis)
+          axis: Number(prescription.rightEye.axis),
+          pd: Number(prescription.rightEye.pd)
         },
         leftEye: {
           sphere: Number(prescription.leftEye.sphere),
           cylinder: Number(prescription.leftEye.cylinder),
-          axis: Number(prescription.leftEye.axis)
+          axis: Number(prescription.leftEye.axis),
+          pd: Number(prescription.leftEye.pd)
         },
-        pdDistance: Number(prescription.pdDistance),
         prescriptionType: prescription.prescriptionType,
-        prescriptionImage: prescriptionImage
+        usage: prescription.usage,
+        prescriptionDate: prescription.prescriptionDate,
+        prescriptionImage: prescriptionImage,
+        ...(prescription.prescriptionType === 'Bifocal' || prescription.prescriptionType === 'Progressive' 
+          ? { addition: Number(prescription.addition) }
+          : {})
       };
 
-      if (isNaN(prescriptionData.rightEye.sphere) || 
-          isNaN(prescriptionData.rightEye.cylinder) || 
-          isNaN(prescriptionData.rightEye.axis) ||
-          isNaN(prescriptionData.leftEye.sphere) ||
-          isNaN(prescriptionData.leftEye.cylinder) ||
-          isNaN(prescriptionData.leftEye.axis) ||
-          isNaN(prescriptionData.pdDistance)) {
-        toast.error('Please enter valid numbers for all fields');
-        return;
-      }
+      console.log('Sending prescription data:', prescriptionData);
 
       const response = await axios.post(
         `${API_BASE_URL}/prescriptions`,
         prescriptionData,
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
           }
         }
       );
+
+      console.log('Server response:', response.data);
 
       if (response.data.success) {
         toast.success('Prescription saved successfully');
         fetchPrescriptions();
         setPrescription({
-          rightEye: { sphere: '', cylinder: '', axis: '' },
-          leftEye: { sphere: '', cylinder: '', axis: '' },
-          pdDistance: '',
-          prescriptionType: 'Single Vision'
+          rightEye: { sphere: '', cylinder: '', axis: '', pd: '' },
+          leftEye: { sphere: '', cylinder: '', axis: '', pd: '' },
+          addition: '',
+          prescriptionType: 'Single Vision',
+          usage: 'Distance',
+          prescriptionDate: new Date().toISOString().split('T')[0]
         });
         setPrescriptionImage(null);
       }
     } catch (error) {
-      console.error('Full error:', error);
+      console.error('Submission error:', error);
+      console.error('Error response:', error.response?.data);
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           'Failed to save prescription';
@@ -149,6 +178,252 @@ const Prescription = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRemove = async (prescriptionId) => {
+    setDeleteModal({ isOpen: true, prescriptionId });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to delete prescriptions');
+        return;
+      }
+
+      const prescriptionId = deleteModal.prescriptionId;
+      console.log('Delete request details:', {
+        prescriptionId,
+        hasToken: !!token,
+        token: token,
+        url: `${API_BASE_URL}/prescriptions/${prescriptionId}`
+      });
+
+      const prescriptionExists = savedPrescriptions.some(p => p._id === prescriptionId);
+      if (!prescriptionExists) {
+        toast.error('Prescription not found');
+        setDeleteModal({ isOpen: false, prescriptionId: null });
+        return;
+      }
+
+      const response = await axios.delete(
+        `${API_BASE_URL}/prescriptions/${prescriptionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log('Delete response:', response.data);
+
+      if (response.data.success) {
+        setSavedPrescriptions(prev => 
+          prev.filter(p => p._id !== prescriptionId)
+        );
+        
+        toast.success('Prescription deleted successfully');
+        setDeleteModal({ isOpen: false, prescriptionId: null });
+      } else {
+        throw new Error(response.data.message || 'Failed to delete prescription');
+      }
+    } catch (error) {
+      console.error('Delete operation failed:', {
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        fullError: error,
+        requestedId: deleteModal.prescriptionId,
+        availableIds: savedPrescriptions.map(p => p._id)
+      });
+
+      toast.error(
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to delete prescription'
+      );
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModal({ isOpen: false, prescriptionId: null });
+  };
+
+  const renderPrescriptionCard = (p) => (
+    <div key={p._id} className="bg-white p-6 rounded-lg shadow-md">
+      {/* Header with Status and Actions */}
+      <div className="flex justify-between items-center mb-6 border-b pb-4">
+        <div className="flex items-center space-x-4">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            p.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+            p.status === 'verified' ? 'bg-green-100 text-green-800' :
+            'bg-red-100 text-red-800'
+          }`}>
+            {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+          </span>
+          <span className="text-gray-500">
+            Submitted: {new Date(p.createdAt).toLocaleDateString()}
+          </span>
+        </div>
+        {p.status !== 'verified' && (
+          <button
+            onClick={() => handleRemove(p._id)}
+            className="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            Remove
+          </button>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Left Column - Eye Details */}
+        <div className="space-y-6">
+          {/* Right Eye */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-lg mb-3 text-gray-700">Right Eye (OD)</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Sphere (SPH)</p>
+                <p className="font-medium">{p.rightEye.sphere}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Cylinder (CYL)</p>
+                <p className="font-medium">{p.rightEye.cylinder}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Axis</p>
+                <p className="font-medium">{p.rightEye.axis}°</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">PD</p>
+                <p className="font-medium">{p.rightEye.pd} mm</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Left Eye */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-lg mb-3 text-gray-700">Left Eye (OS)</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Sphere (SPH)</p>
+                <p className="font-medium">{p.leftEye.sphere}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Cylinder (CYL)</p>
+                <p className="font-medium">{p.leftEye.cylinder}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Axis</p>
+                <p className="font-medium">{p.leftEye.axis}°</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">PD</p>
+                <p className="font-medium">{p.leftEye.pd} mm</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Additional Info and Image */}
+        <div className="space-y-6">
+          {/* Prescription Details */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-lg mb-3 text-gray-700">Prescription Details</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">Type</p>
+                <p className="font-medium">{p.prescriptionType}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Usage</p>
+                <p className="font-medium">{p.usage}</p>
+              </div>
+              {p.prescriptionType !== 'Single Vision' && (
+                <div>
+                  <p className="text-sm text-gray-500">Addition Power</p>
+                  <p className="font-medium">{p.addition}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Prescription Image */}
+          {p.prescriptionImage && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-lg mb-3 text-gray-700">Uploaded Prescription</h3>
+              <div className="relative">
+                <img
+                  src={p.prescriptionImage}
+                  alt="Prescription"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <a 
+                  href={p.prescriptionImage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  View Full Image
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Verification Notes (if any) */}
+          {p.verificationNotes && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-lg mb-2 text-gray-700">Verification Notes</h3>
+              <p className="text-gray-600">{p.verificationNotes}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const RemoveConfirmationModal = () => {
+    if (!deleteModal.isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Remove Prescription
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Are you sure you want to remove this prescription? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={cancelDelete}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium flex items-center"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 mr-1.5" 
+                viewBox="0 0 20 20" 
+                fill="currentColor"
+              >
+                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -159,7 +434,7 @@ const Prescription = () => {
         {/* Right Eye */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4">Right Eye (OD)</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Sphere (SPH)</label>
               <input
@@ -201,18 +476,35 @@ const Prescription = () => {
                 required
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">PD</label>
+              <input
+                type="number"
+                step="0.5"
+                min="25"
+                max="40"
+                placeholder="25 to 40"
+                value={prescription.rightEye.pd}
+                onChange={(e) => handleInputChange('rightEye', 'pd', e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                required
+              />
+            </div>
           </div>
         </div>
 
         {/* Left Eye */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4">Left Eye (OS)</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Sphere (SPH)</label>
               <input
                 type="number"
                 step="0.25"
+                min="-20"
+                max="20"
+                placeholder="-20 to +20"
                 value={prescription.leftEye.sphere}
                 onChange={(e) => handleInputChange('leftEye', 'sphere', e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
@@ -224,6 +516,9 @@ const Prescription = () => {
               <input
                 type="number"
                 step="0.25"
+                min="-6"
+                max="6"
+                placeholder="-6 to +6"
                 value={prescription.leftEye.cylinder}
                 onChange={(e) => handleInputChange('leftEye', 'cylinder', e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
@@ -234,8 +529,25 @@ const Prescription = () => {
               <label className="block text-sm font-medium text-gray-700">Axis</label>
               <input
                 type="number"
+                min="0"
+                max="180"
+                placeholder="0 to 180"
                 value={prescription.leftEye.axis}
                 onChange={(e) => handleInputChange('leftEye', 'axis', e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">PD</label>
+              <input
+                type="number"
+                step="0.5"
+                min="25"
+                max="40"
+                placeholder="25 to 40"
+                value={prescription.leftEye.pd}
+                onChange={(e) => handleInputChange('leftEye', 'pd', e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
                 required
               />
@@ -246,19 +558,6 @@ const Prescription = () => {
         {/* Additional Fields */}
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">PD Distance</label>
-              <input
-                type="number"
-                min="50"
-                max="80"
-                placeholder="50 to 80"
-                value={prescription.pdDistance}
-                onChange={(e) => setPrescription({...prescription, pdDistance: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
-                required
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Prescription Type</label>
               <select
@@ -271,6 +570,48 @@ const Prescription = () => {
                 <option value="Bifocal">Bifocal</option>
                 <option value="Progressive">Progressive</option>
               </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Usage</label>
+              <select
+                value={prescription.usage}
+                onChange={(e) => setPrescription({...prescription, usage: e.target.value})}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                required
+              >
+                <option value="Distance">Distance</option>
+                <option value="Reading">Reading</option>
+                <option value="All-time wear">All-time wear</option>
+              </select>
+            </div>
+
+            {(prescription.prescriptionType === 'Bifocal' || prescription.prescriptionType === 'Progressive') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Addition</label>
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0.75"
+                  max="4.00"
+                  placeholder="0.75 to 4.00"
+                  value={prescription.addition}
+                  onChange={(e) => setPrescription({...prescription, addition: e.target.value})}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                  required
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Prescription Date</label>
+              <input
+                type="date"
+                value={prescription.prescriptionDate}
+                onChange={(e) => setPrescription({...prescription, prescriptionDate: e.target.value})}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                required
+              />
             </div>
           </div>
         </div>
@@ -311,54 +652,14 @@ const Prescription = () => {
       {/* Display Saved Prescriptions */}
       {savedPrescriptions.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4">Your Saved Prescriptions</h2>
-          <div className="space-y-4">
-            {savedPrescriptions.map((p, index) => (
-              <div key={p._id} className="bg-white p-4 rounded-lg shadow">
-                <div className="flex justify-between items-center">
-                  <p className="font-semibold">Prescription {index + 1}</p>
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    p.status === 'verified' ? 'bg-green-100 text-green-800' :
-                    p.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                  </span>
-                </div>
-                <p>Date: {new Date(p.createdAt).toLocaleDateString()}</p>
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div>
-                    <p className="font-medium">Right Eye:</p>
-                    <p>SPH: {p.rightEye.sphere}</p>
-                    <p>CYL: {p.rightEye.cylinder}</p>
-                    <p>Axis: {p.rightEye.axis}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium">Left Eye:</p>
-                    <p>SPH: {p.leftEye.sphere}</p>
-                    <p>CYL: {p.leftEye.cylinder}</p>
-                    <p>Axis: {p.leftEye.axis}</p>
-                  </div>
-                </div>
-                <p className="mt-2">PD Distance: {p.pdDistance}</p>
-                <p>Type: {p.prescriptionType}</p>
-                {p.prescriptionImage && (
-                  <div className="mt-2">
-                    <a 
-                      href={p.prescriptionImage} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      View Prescription Image
-                    </a>
-                  </div>
-                )}
-              </div>
-            ))}
+          <h2 className="text-xl font-semibold mb-4">Your Prescriptions</h2>
+          <div className="grid gap-6">
+            {savedPrescriptions.map(renderPrescriptionCard)}
           </div>
         </div>
       )}
+
+      <RemoveConfirmationModal />
     </div>
   );
 };

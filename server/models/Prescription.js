@@ -7,108 +7,101 @@ const prescriptionSchema = new mongoose.Schema({
     required: true
   },
   rightEye: {
-    sphere: {
-      type: Number,
+    sphere: { 
+      type: Number, 
       required: true,
-      validate: {
-        validator: function(v) {
-          return v >= -20 && v <= 20;  // Standard range for sphere
-        },
-        message: 'Sphere must be between -20 and +20'
-      }
+      min: -20,
+      max: 20
     },
-    cylinder: {
-      type: Number,
+    cylinder: { 
+      type: Number, 
       required: true,
-      validate: {
-        validator: function(v) {
-          return v >= -6 && v <= 6;  // Standard range for cylinder
-        },
-        message: 'Cylinder must be between -6 and +6'
-      }
+      min: -6,
+      max: 6
     },
-    axis: {
-      type: Number,
+    axis: { 
+      type: Number, 
       required: true,
       min: 0,
-      max: 180,
-      validate: {
-        validator: Number.isInteger,
-        message: 'Axis must be an integer between 0 and 180'
-      }
+      max: 180
+    },
+    pd: { 
+      type: Number, 
+      required: true,
+      min: 25,
+      max: 40
     }
   },
   leftEye: {
-    sphere: {
-      type: Number,
+    sphere: { 
+      type: Number, 
       required: true,
-      validate: {
-        validator: function(v) {
-          return v >= -20 && v <= 20;  // Standard range for sphere
-        },
-        message: 'Sphere must be between -20 and +20'
-      }
+      min: -20,
+      max: 20
     },
-    cylinder: {
-      type: Number,
+    cylinder: { 
+      type: Number, 
       required: true,
-      validate: {
-        validator: function(v) {
-          return v >= -6 && v <= 6;  // Standard range for cylinder
-        },
-        message: 'Cylinder must be between -6 and +6'
-      }
+      min: -6,
+      max: 6
     },
-    axis: {
-      type: Number,
+    axis: { 
+      type: Number, 
       required: true,
       min: 0,
-      max: 180,
-      validate: {
-        validator: Number.isInteger,
-        message: 'Axis must be an integer between 0 and 180'
-      }
+      max: 180
+    },
+    pd: { 
+      type: Number, 
+      required: true,
+      min: 25,
+      max: 40
+    }
+  },
+  prescriptionType: {
+    type: String,
+    required: true,
+    enum: ['Single Vision', 'Bifocal', 'Progressive']
+  },
+  usage: {
+    type: String,
+    required: true,
+    enum: ['Distance', 'Reading', 'Computer', 'All Purpose']
+  },
+  addition: {
+    type: Number,
+    min: 0.75,
+    max: 4.00,
+    required: function() {
+      return ['Bifocal', 'Progressive'].includes(this.prescriptionType);
+    },
+    validate: {
+      validator: function(v) {
+        if (!this.prescriptionType || ['Bifocal', 'Progressive'].includes(this.prescriptionType)) {
+          return v >= 0.75 && v <= 4.00;
+        }
+        return true;
+      },
+      message: 'Addition must be between 0.75 and 4.00 for Bifocal and Progressive lenses'
     }
   },
   prescriptionDate: {
     type: Date,
-    required: true,
-    default: Date.now
-  },
-  expiryDate: {
-    type: Date,
-    required: true,
-    default: function() {
-      let date = new Date();
-      date.setFullYear(date.getFullYear() + 1);
-      return date;
-    }
+    required: true
   },
   prescriptionImage: {
-    type: String,  // URL to stored image
+    type: String,
+    required: true
   },
   status: {
     type: String,
     enum: ['pending', 'verified', 'rejected'],
     default: 'pending'
   },
-  verificationNotes: {
-    type: String
-  },
+  verificationNotes: String,
   verifiedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  },
-  pdDistance: {
-    type: Number,
-    required: true,
-    min: 50,
-    max: 80
-  },
-  prescriptionType: {
-    type: String,
-    enum: ['Single Vision', 'Bifocal', 'Progressive'],
-    required: true
   }
 }, { timestamps: true });
 

@@ -4,86 +4,105 @@ const Prescription = require('../models/Prescription');
 const { auth, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const cloudinaryStorage = require('../middleware/cloudinaryStorage');
+const mongoose = require('mongoose');
 
-// Debug middleware
-router.use((req, res, next) => {
-  console.log('Prescription Route accessed:', req.method, req.path);
-  next();
-});
+// Define validation function before creating router
+function validateEyeData(eyeData, eyeName) {
+  if (!eyeData || typeof eyeData !== 'object') {
+    throw new Error(`Invalid ${eyeName} data`);
+  }
+
+  const { sphere, cylinder, axis, pd } = eyeData;
+
+  if (sphere === undefined || cylinder === undefined || 
+      axis === undefined || pd === undefined) {
+    throw new Error(`Missing required fields for ${eyeName}`);
+  }
+
+  // Convert to numbers and validate
+  const numSphere = Number(sphere);
+  const numCylinder = Number(cylinder);
+  const numAxis = Number(axis);
+  const numPd = Number(pd);
+
+  if (isNaN(numSphere) || isNaN(numCylinder) || 
+      isNaN(numAxis) || isNaN(numPd)) {
+    throw new Error(`Invalid numeric values for ${eyeName}`);
+  }
+
+  // Validate ranges
+  if (numSphere < -20 || numSphere > 20) {
+    throw new Error(`Invalid sphere value for ${eyeName}`);
+  }
+  if (numCylinder < -6 || numCylinder > 6) {
+    throw new Error(`Invalid cylinder value for ${eyeName}`);
+  }
+  if (numAxis < 0 || numAxis > 180) {
+    throw new Error(`Invalid axis value for ${eyeName}`);
+  }
+  if (numPd < 25 || numPd > 40) {
+    throw new Error(`Invalid PD value for ${eyeName}`);
+  }
+}
 
 // Create new prescription
 router.post('/', auth, async (req, res) => {
   try {
-    console.log('1. Request received');
-    console.log('2. Auth user:', req.user);
-    console.log('3. Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Creating prescription:', req.body);
+    
+    // Validate eye data
+    validateEyeData(req.body.rightEye, 'Right Eye');
+    validateEyeData(req.body.leftEye, 'Left Eye');
 
-    // Validate required fields
-    if (!req.body.rightEye || !req.body.leftEye || !req.body.pdDistance) {
-      console.log('4. Validation failed - missing fields');
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields'
-      });
-    }
-
-    // Create prescription data with explicit type conversion
+    // Create base prescription data
     const prescriptionData = {
       userId: req.user.id,
       rightEye: {
-        sphere: Number(req.body.rightEye.sphere) || 0,
-        cylinder: Number(req.body.rightEye.cylinder) || 0,
-        axis: Number(req.body.rightEye.axis) || 0
+        sphere: Number(req.body.rightEye.sphere),
+        cylinder: Number(req.body.rightEye.cylinder),
+        axis: Number(req.body.rightEye.axis),
+        pd: Number(req.body.rightEye.pd)
       },
       leftEye: {
-        sphere: Number(req.body.leftEye.sphere) || 0,
-        cylinder: Number(req.body.leftEye.cylinder) || 0,
-        axis: Number(req.body.leftEye.axis) || 0
+        sphere: Number(req.body.leftEye.sphere),
+        cylinder: Number(req.body.leftEye.cylinder),
+        axis: Number(req.body.leftEye.axis),
+        pd: Number(req.body.leftEye.pd)
       },
-      pdDistance: Number(req.body.pdDistance) || 0,
-      prescriptionType: req.body.prescriptionType || 'Single Vision',
+      prescriptionType: req.body.prescriptionType,
+      usage: req.body.usage,
+      prescriptionDate: req.body.prescriptionDate,
       prescriptionImage: req.body.prescriptionImage
     };
 
-    console.log('5. Processed data:', JSON.stringify(prescriptionData, null, 2));
+    // Handle addition for Bifocal and Progressive
+    if (['Bifocal', 'Progressive'].includes(req.body.prescriptionType)) {
+      if (!req.body.addition) {
+        return res.status(400).json({
+          success: false,
+          message: 'Addition power is required for Bifocal and Progressive lenses'
+        });
+      }
+      prescriptionData.addition = Number(req.body.addition);
+    }
+
+    console.log('Processed prescription data:', prescriptionData);
 
     const prescription = new Prescription(prescriptionData);
     const savedPrescription = await prescription.save();
-
+    
+    console.log('Saved prescription:', savedPrescription);
     res.status(201).json({
       success: true,
       prescription: savedPrescription
     });
   } catch (error) {
-    console.error('ERROR DETAILS:', error);
-    res.status(500).json({
+    console.error('Error saving prescription:', error);
+    res.status(400).json({
       success: false,
-      message: 'Server error while saving prescription',
+      message: error.message || 'Error saving prescription',
       error: error.message
     });
-  }
-});
-
-// Get user's prescriptions
-router.get('/', auth, async (req, res) => {
-  try {
-    const prescriptions = await Prescription.find({ userId: req.user.id })
-      .sort({ createdAt: -1 });
-    res.json(prescriptions);
-  } catch (error) {
-    console.error('Error fetching prescriptions:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Add new routes
-const cloudinaryUpload = multer({
-  storage: cloudinaryStorage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
@@ -93,10 +112,9 @@ router.post('/upload', auth, cloudinaryStorage.single('prescriptionImage'), asyn
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
-    console.log('Uploaded file:', req.file);
     res.json({ 
       success: true,
-      imageUrl: req.file.path // Cloudinary URL
+      imageUrl: req.file.path
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -104,51 +122,109 @@ router.post('/upload', auth, cloudinaryStorage.single('prescriptionImage'), asyn
   }
 });
 
-router.get('/admin', isAdmin, async (req, res) => {
+// Get user's prescriptions
+router.get('/', auth, async (req, res) => {
   try {
-    console.log('Admin fetching prescriptions');
-    const prescriptions = await Prescription.find()
-      .populate('userId', 'name email')
+    console.log('Fetching prescriptions for user:', req.user.id);
+    const prescriptions = await Prescription.find({ userId: req.user.id })
       .sort({ createdAt: -1 });
-    
-    console.log('Found prescriptions:', prescriptions.length);
-    
-    if (prescriptions.length === 0) {
-      return res.json([]);
-    }
-
     res.json(prescriptions);
   } catch (error) {
     console.error('Error fetching prescriptions:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: error.message 
-    });
+    res.status(500).json({ message: error.message });
   }
 });
 
+// Get all prescriptions (admin only)
+router.get('/admin', isAdmin, async (req, res) => {
+  try {
+    const prescriptions = await Prescription.find()
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 });
+    res.json(prescriptions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update prescription verification status
 router.patch('/:id/verify', isAdmin, async (req, res) => {
   try {
     const { status, verificationNotes } = req.body;
     
-    const prescription = await Prescription.findByIdAndUpdate(
-      req.params.id,
-      {
-        status,
-        verificationNotes,
-        verifiedBy: req.user.id
-      },
-      { new: true }
-    ).populate('userId', 'name email');
-
+    const prescription = await Prescription.findById(req.params.id);
     if (!prescription) {
       return res.status(404).json({ message: 'Prescription not found' });
     }
 
-    res.json(prescription);
+    prescription.status = status;
+    prescription.verificationNotes = verificationNotes;
+    prescription.verifiedBy = req.user.id;
+    await prescription.save();
+
+    const updatedPrescription = await prescription.populate('userId', 'name email');
+    res.json(updatedPrescription);
   } catch (error) {
     console.error('Verification error:', error);
     res.status(500).json({ message: 'Error updating prescription status' });
+  }
+});
+
+// Remove prescription
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    // Log the incoming request
+    console.log('Remove request received for prescription:', req.params.id);
+    
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid prescription ID'
+      });
+    }
+
+    // Find the prescription and ensure it belongs to the user
+    const prescription = await Prescription.findOne({ 
+      _id: req.params.id,
+      userId: req.user.id 
+    });
+
+    if (!prescription) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Prescription not found or unauthorized' 
+      });
+    }
+
+    if (prescription.status === 'verified') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot remove verified prescriptions'
+      });
+    }
+
+    // Remove the prescription from the database
+    const result = await Prescription.findByIdAndDelete(req.params.id);
+    
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Prescription could not be removed'
+      });
+    }
+
+    res.json({ 
+      success: true,
+      message: 'Prescription removed successfully' 
+    });
+  } catch (error) {
+    console.error('Remove operation failed:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error removing prescription',
+      error: error.message 
+    });
   }
 });
 
