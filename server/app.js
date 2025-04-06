@@ -6,6 +6,7 @@ const productRoutes = require('./routes/productRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const khaltiRoutes = require('./routes/payment/khaltiRoutes');
 
 const app = express();
 
@@ -31,6 +32,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+
+app.use('/api/payment/khalti', khaltiRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -58,4 +61,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-module.exports = app; 
+module.exports = app;

@@ -59,6 +59,13 @@ const AdminDashboard = () => {
           description="Financial overview"
           icon="💰"
         />
+        <DashboardCard
+          title="Lens Management"
+          count="Manage"
+          link="/admin/lens"
+          description="Configure lens types and pricing"
+          icon="👓"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -120,4 +127,4 @@ const QuickActionButton = ({ title, link, icon }) => (
   </Link>
 );
 
-export default AdminDashboard; 
+export default AdminDashboard;

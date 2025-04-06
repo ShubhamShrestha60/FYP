@@ -8,6 +8,7 @@ import AdminOrders from '../pages/admin/AdminOrders';
 import AdminUsers from '../pages/admin/AdminUsers';
 import AdminSettings from '../pages/admin/AdminSettings';
 import AdminPrescriptions from '../pages/admin/AdminPrescriptions';
+import LensManagement from '../pages/admin/LensManagement';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoutes = () => {
@@ -42,6 +43,7 @@ const AdminRoutes = () => {
         <Route path="users" element={<AdminUsers />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="prescriptions" element={<AdminPrescriptions />} />
+        <Route path="lens" element={<LensManagement />} />
       </Route>
 
       {/* Catch all route */}

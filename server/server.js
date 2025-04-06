@@ -9,6 +9,7 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const khaltiRoutes = require('./routes/payment/khaltiRoutes');
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payment/khalti', khaltiRoutes);
 
 // Add this after your routes are registered
 app.use((req, res, next) => {

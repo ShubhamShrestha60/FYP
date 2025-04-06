@@ -33,11 +33,15 @@ const AdminPrescriptions = () => {
 
   const handleVerificationUpdate = async (id, status) => {
     try {
-      const token = localStorage.getItem('token');
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        toast.error('Admin authentication required');
+        return;
+      }
       await axios.patch(
         `${API_BASE_URL}/prescriptions/${id}/verify`,
         { status, verificationNotes },
-        { headers: { Authorization: `Bearer ${token}` }}
+        { headers: { Authorization: `Bearer ${adminToken}` }}
       );
       fetchPrescriptions();
       setSelectedPrescription(null);
@@ -269,4 +273,4 @@ const AdminPrescriptions = () => {
   );
 };
 
-export default AdminPrescriptions; 
+export default AdminPrescriptions;

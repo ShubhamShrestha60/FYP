@@ -123,11 +123,22 @@ router.post('/upload', auth, cloudinaryStorage.single('prescriptionImage'), asyn
 });
 
 // Get user's prescriptions
+// Get user's prescriptions with filters
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('Fetching prescriptions for user:', req.user.id);
-    const prescriptions = await Prescription.find({ userId: req.user.id })
-      .sort({ createdAt: -1 });
+    const { status, prescriptionType } = req.query;
+    const filters = { userId: req.user.id };
+
+    // Add filters if provided
+    if (status) filters.status = status;
+    if (prescriptionType) filters.prescriptionType = prescriptionType;
+
+    console.log('Applying filters:', filters); // Debug log
+
+    const prescriptions = await Prescription.find(filters)
+      .sort({ prescriptionDate: -1 });
+
+    console.log('Found prescriptions:', prescriptions); // Debug log
     res.json(prescriptions);
   } catch (error) {
     console.error('Error fetching prescriptions:', error);
@@ -228,4 +239,49 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-module.exports = router; 
+// Add this new route for fetching verified prescriptions by type
+// Add this new route after your existing routes
+// Get verified prescriptions by type for the current user
+// Move this route BEFORE the generic '/' route
+router.get('/user/verified/:type', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { type } = req.params;
+
+    console.log('Fetching verified prescriptions:', {
+      userId,
+      type,
+      status: 'verified'
+    });
+
+    const prescriptions = await Prescription.find({
+      userId: userId,
+      prescriptionType: type,
+      status: 'verified'
+    }).sort({ prescriptionDate: -1 });
+
+    console.log('Found prescriptions:', prescriptions);
+    res.json(prescriptions);
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ 
+      message: 'Error fetching prescriptions',
+      error: error.message 
+    });
+  }
+});
+
+// Move this generic route AFTER the specific routes
+router.get('/', auth, async (req, res) => {
+  try {
+    console.log('Fetching prescriptions for user:', req.user.id);
+    const prescriptions = await Prescription.find({ userId: req.user.id })
+      .sort({ createdAt: -1 });
+    res.json(prescriptions);
+  } catch (error) {
+    console.error('Error fetching prescriptions:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+module.exports = router;

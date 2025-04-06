@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FiPackage, FiShoppingBag, FiUsers, FiEye } from 'react-icons/fi';
+import { FiPackage, FiShoppingBag, FiUsers, FiEye, FiSliders } from 'react-icons/fi';
 
 const AdminDashboard = () => {
   return (
@@ -42,9 +42,18 @@ const AdminDashboard = () => {
           <h2 className="text-xl font-semibold">Users</h2>
           <p className="text-gray-600">Manage user accounts</p>
         </Link>
+
+        <Link 
+          to="/admin/lens-management" 
+          className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
+        >
+          <FiSliders className="text-2xl mb-2 text-orange-600" />
+          <h2 className="text-xl font-semibold">Lens Management</h2>
+          <p className="text-gray-600">Configure lens powers and pricing</p>
+        </Link>
       </div>
     </div>
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;

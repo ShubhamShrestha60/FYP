@@ -43,7 +43,7 @@ const Footer = () => {
             </p>
             <div className="flex space-x-6 pt-2">
               <motion.a 
-                href="https://instagram.com" 
+                href="https://www.instagram.com/operaeyewear.nepal/" 
                 target="_blank"
                 rel="noopener noreferrer"
                 whileHover={{ y: -3, color: '#E1306C' }}

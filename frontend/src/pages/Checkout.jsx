@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import KhaltiPayment from '../components/payment/KhaltiPayment';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
@@ -39,11 +40,13 @@ const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    
     try {
       const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const shippingCost = 150;
       const total = subtotal + shippingCost;
-
+  
       const orderData = {
         customer: {
           name: formData.name,
@@ -65,21 +68,69 @@ const Checkout = () => {
         subtotal,
         shippingCost,
         total,
-        paymentMethod: 'cod'  // Default to COD for now
+        paymentMethod: formData.paymentMethod
       };
+  
+      // Create order first
+      const orderResponse = await axios.post('http://localhost:5001/api/orders', orderData);
+      const orderId = orderResponse.data._id;
+  
+      if (formData.paymentMethod === 'khalti') {
+        try {
+          // Store order details in localStorage for recovery
+          localStorage.setItem('pending_order', JSON.stringify({
+            orderId,
+            amount: total,
+            customer: {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone
+            }
+          }));
 
-      console.log('Sending order data:', orderData);
+          // Initiate Khalti payment
+          const khaltiResponse = await axios.post('http://localhost:5001/api/payment/khalti/initiate', {
+            amount: total * 100, // Convert to paisa
+            purchase_order_id: orderId,
+            purchase_order_name: `Order #${orderId}`,
+            customer_info: {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone
+            },
+            return_url: `${window.location.origin}/payment/success`,
+            website_url: window.location.origin
+          }, {
+            timeout: 10000 // Set timeout to 10 seconds
+          });
+          
+          if (!khaltiResponse.data || !khaltiResponse.data.payment_url) {
+            throw new Error('Invalid payment URL received from Khalti');
+          }
 
-      const response = await axios.post('http://localhost:5001/api/orders', orderData);
-      console.log('Order response:', response.data);
-
-      clearCart();
-      toast.success('Order placed successfully!');
-      navigate(`/order-success/${response.data._id}`);
-      
+          // Redirect to Khalti payment page
+          window.location.href = khaltiResponse.data.payment_url;
+        } catch (paymentError) {
+          console.error('Khalti payment error:', paymentError);
+          if (paymentError.code === 'ECONNRESET' || paymentError.code === 'ETIMEDOUT') {
+            toast.error('Payment service temporarily unavailable. Please try again.');
+          } else {
+            toast.error(paymentError.message || 'Failed to initiate payment. Please try again.');
+          }
+          // Remove pending order from localStorage
+          localStorage.removeItem('pending_order');
+        }
+      } else {
+        // For COD, just clear cart and redirect
+        clearCart();
+        toast.success('Order placed successfully!');
+        navigate(`/order-success/${orderId}`);
+      }
     } catch (error) {
-      console.error('Order error:', error.response?.data || error);
+      console.error('Order error:', error);
       toast.error(error.response?.data?.message || 'Error placing order');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,11 +141,12 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Billing Details */}
-          <div>
-            <h2 className="text-xl font-semibold mb-6">Billing Details</h2>
-            <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Billing Details */}
+            <div>
+              <h2 className="text-xl font-semibold mb-6">Billing Details</h2>
+              <div>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block mb-2">First name *</label>
@@ -192,36 +244,13 @@ const Checkout = () => {
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  Ship To A Different Address?
-                </label>
-              </div>
-
-              <div className="text-sm text-gray-600 mb-6">
-                Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our{' '}
-                <a href="/privacy-policy" className="text-blue-600">Privacy policy</a>.
-              </div>
-
               {/* Add error message display */}
               {error && (
                 <div className="text-red-600 mb-4 text-center">
                   {error}
                 </div>
               )}
-
-              {/* Update the form and button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full ${
-                  loading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'
-                } text-white py-3 rounded transition-colors`}
-              >
-                {loading ? 'Processing...' : 'PLACE ORDER'}
-              </button>
-            </form>
+            </div>
           </div>
 
           {/* Your Order */}
@@ -264,54 +293,40 @@ const Checkout = () => {
               </table>
 
               {/* Payment Methods */}
-              <div className="mb-6">
+              <div className="mb-6 space-y-4">
+                <h3 className="font-medium text-gray-900">Payment Method</h3>
+                
                 {/* Cash on Delivery */}
-                <div className="mb-4">
-                  <label className="flex items-center mb-2">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={formData.paymentMethod === 'cod'}
-                      onChange={handleInputChange}
-                      className="mr-2"
-                    />
-                    <span>Cash on delivery</span>
-                  </label>
-                  {formData.paymentMethod === 'cod' && (
-                    <div className="ml-6 text-gray-600 bg-gray-100 p-3 rounded">
-                      Pay with cash upon delivery.
-                    </div>
-                  )}
-                </div>
-
-                {/* eSewa */}
-                <div className="mb-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="esewa"
-                      checked={formData.paymentMethod === 'esewa'}
-                      onChange={handleInputChange}
-                      className="mr-2"
-                    />
-                    <span>eSewa</span>
+                <div className="relative flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    id="cod"
+                    checked={formData.paymentMethod === 'cod'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <label htmlFor="cod" className="ml-3 flex flex-col cursor-pointer">
+                    <span className="block text-sm font-medium text-gray-900">Cash on Delivery</span>
+                    <span className="block text-sm text-gray-500">Pay with cash when your order arrives</span>
                   </label>
                 </div>
 
-                {/* Card Payment */}
-                <div className="mb-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="card"
-                      checked={formData.paymentMethod === 'card'}
-                      onChange={handleInputChange}
-                      className="mr-2"
-                    />
-                    <span>Visa/Master Card</span>
+                {/* Khalti Payment */}
+                <div className="relative flex items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="khalti"
+                    id="khalti"
+                    checked={formData.paymentMethod === 'khalti'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                  />
+                  <label htmlFor="khalti" className="ml-3 flex flex-col cursor-pointer">
+                    <span className="block text-sm font-medium text-gray-900">Khalti</span>
+                    <span className="block text-sm text-gray-500">Pay securely using Khalti digital wallet</span>
                   </label>
                 </div>
               </div>
@@ -328,16 +343,20 @@ const Checkout = () => {
               {/* Place Order Button */}
               <button
                 type="submit"
-                className="w-full bg-blue-500 text-white py-3 rounded hover:bg-blue-600"
+                disabled={loading}
+                className={`w-full ${
+                  loading ? 'bg-gray-400' : formData.paymentMethod === 'khalti' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-500 hover:bg-blue-600'
+                } text-white py-3 rounded transition-colors`}
               >
-                PLACE ORDER
+                {loading ? 'Processing...' : formData.paymentMethod === 'khalti' ? 'Pay with Khalti' : 'PLACE ORDER'}
               </button>
             </div>
           </div>
         </div>
+        </form>
       </div>
     </div>
   );
 };
 
-export default Checkout; 
+export default Checkout;

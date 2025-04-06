@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
-
+import LensSelector from '../components/LensSelector/LensSelector';
 const Product = () => {
+  // Add these new states
+  const [showLensSelector, setShowLensSelector] = useState(false);
+  const [selectedLensOptions, setSelectedLensOptions] = useState(null);
   const { productId } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
@@ -27,8 +30,14 @@ const Product = () => {
     }
   };
 
+  // Update handleAddToCart
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    const productWithLens = {
+      ...product,
+      quantity,
+      lensOptions: selectedLensOptions
+    };
+    addToCart(productWithLens);
     alert('Product added to cart!');
   };
 
@@ -124,6 +133,31 @@ const Product = () => {
               </select>
             </div>
 
+            {/* Replace the lens button section */}
+            {['eyeglasses', 'sunglasses'].includes(product.category) && (
+              <>
+                <button
+                  onClick={() => setShowLensSelector(true)}
+                  className="w-full py-3 px-8 rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  {selectedLensOptions ? 'Change Lens Options' : 'Select Lens'}
+                </button>
+                {selectedLensOptions && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    Selected lens price: Rs.{selectedLensOptions.totalPrice}
+                  </div>
+                )}
+              </>
+            )}
+
+            {showLensSelector && (
+              <LensSelector
+                onClose={() => setShowLensSelector(false)}
+                onSelectLens={setSelectedLensOptions}
+              />
+            )}
+
+            {/* Existing add to cart button */}
             <button
               onClick={handleAddToCart}
               className={`w-full py-3 px-8 rounded-md text-white ${

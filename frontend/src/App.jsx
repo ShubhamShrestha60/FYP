@@ -14,6 +14,7 @@ import CreateAdmin from './pages/CreateAdmin';
 import { CartProvider } from './context/CartContext';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
+import PaymentSuccess from './pages/PaymentSuccess';
 
 const App = () => {
   return (
@@ -35,6 +36,8 @@ const App = () => {
 
             {/* New route for Order Success */}
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+            // Add this route in your Routes component
+            <Route path="/payment/success" element={<PaymentSuccess />} />
           </Routes>
         </ProductProvider>
       </AuthProvider>
