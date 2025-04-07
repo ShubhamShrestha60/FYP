@@ -10,6 +10,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const khaltiRoutes = require('./routes/payment/khaltiRoutes');
+const lensRoutes = require('./routes/lensRoutes');
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment/khalti', khaltiRoutes);
+app.use('/api/lens', lensRoutes);
 
 // Add this after your routes are registered
 app.use((req, res, next) => {

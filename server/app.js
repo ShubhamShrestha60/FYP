@@ -7,6 +7,7 @@ const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const khaltiRoutes = require('./routes/payment/khaltiRoutes');
+const lensRoutes = require('./routes/lensRoutes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/lens', lensRoutes);
 
 app.use('/api/payment/khalti', khaltiRoutes);
 

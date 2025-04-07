@@ -1,42 +1,38 @@
 const mongoose = require('mongoose');
 
 const lensSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
   type: {
     type: String,
-    enum: ['Single Vision', 'Bifocal', 'Progressive', 'Computer'],
+    enum: ['Single Vision', 'Bifocal', 'Progressive'],
     required: true
   },
-  material: {
+  coating: {
     type: String,
-    enum: ['CR39', 'Polycarbonate', 'High Index 1.67', 'High Index 1.74'],
+    enum: ['Normal', 'Blue Ray Cut', 'Combo'],
     required: true
   },
-  features: [{
-    type: String,
-    enum: ['Anti-Reflective', 'Blue Light', 'Photochromic', 'UV Protection', 'Scratch Resistant']
-  }],
-  powerRange: {
-    min: Number,
-    max: Number
-  },
-  basePrice: {
-    type: Number,
-    required: true
-  },
-  additionalFeaturesPrices: {
-    antiReflective: Number,
-    blueLight: Number,
-    photochromic: Number
-  },
-  description: String,
-  availability: {
-    type: Boolean,
-    default: true
+  powerRanges: {
+    sphere: {
+      range0to6: {
+        type: Number,
+        required: true
+      },
+      above6: {
+        type: Number,
+        required: true
+      }
+    },
+    cylinder: {
+      range0to2: {
+        type: Number,
+        required: true
+      },
+      above2: {
+        type: Number,
+        required: true
+      }
+    }
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Lens', lensSchema); 
+module.exports = mongoose.model('Lens', lensSchema);
