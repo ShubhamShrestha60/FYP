@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FiPackage, FiShoppingBag, FiUsers, FiEye, FiSliders } from 'react-icons/fi';
+import { FiPackage, FiShoppingBag, FiUsers, FiEye, FiSliders, FiUserPlus } from 'react-icons/fi';
 
 const AdminDashboard = () => {
   return (
@@ -50,6 +50,15 @@ const AdminDashboard = () => {
           <FiSliders className="text-2xl mb-2 text-orange-600" />
           <h2 className="text-xl font-semibold">Lens Management</h2>
           <p className="text-gray-600">Configure lens powers and pricing</p>
+        </Link>
+
+        <Link 
+          to="/admin/doctors" 
+          className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
+        >
+          <FiUserPlus className="text-2xl mb-2 text-indigo-600" />
+          <h2 className="text-xl font-semibold">Doctors</h2>
+          <p className="text-gray-600">Manage doctors and appointments</p>
         </Link>
       </div>
     </div>

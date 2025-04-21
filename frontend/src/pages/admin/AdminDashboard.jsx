@@ -66,6 +66,13 @@ const AdminDashboard = () => {
           description="Configure lens types and pricing"
           icon="👓"
         />
+        <DashboardCard
+          title="Doctors"
+          count="Manage"
+          link="/admin/doctors"
+          description="Manage doctors and appointments"
+          icon="👨‍⚕️"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -86,6 +93,11 @@ const AdminDashboard = () => {
               title="View Reports"
               link="/admin/reports"
               icon="📊"
+            />
+            <QuickActionButton
+              title="Manage Doctors"
+              link="/admin/doctors"
+              icon="👨‍⚕️"
             />
           </div>
         </div>

@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
 import LensSelector from '../components/LensSelector/LensSelector';
+
 const Product = () => {
-  // Add these new states
   const [showLensSelector, setShowLensSelector] = useState(false);
   const [selectedLensOptions, setSelectedLensOptions] = useState(null);
   const { productId } = useParams();
@@ -30,8 +30,12 @@ const Product = () => {
     }
   };
 
-  // Update handleAddToCart
   const handleAddToCart = () => {
+    if (['eyeglasses', 'sunglasses'].includes(product.category) && !selectedLensOptions) {
+      alert('Please select lens options before adding to cart');
+      return;
+    }
+
     const productWithLens = {
       ...product,
       quantity,
@@ -95,7 +99,7 @@ const Product = () => {
             <p className="text-xl text-gray-500">{product.brand}</p>
           </div>
 
-          <p className="text-2xl font-bold text-red-600">Rs.{product.price}</p>
+          <p className="text-2xl font-bold text-red-600">Rs. {product.price}</p>
 
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Description</h2>
@@ -105,7 +109,7 @@ const Product = () => {
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Specifications</h2>
             <div className="grid grid-cols-2 gap-4">
-              {Object.entries(product.specifications).map(([key, value]) => (
+              {Object.entries(product.specifications || {}).map(([key, value]) => (
                 <div key={key}>
                   <p className="text-sm text-gray-500">{key}</p>
                   <p className="font-medium">{value}</p>
@@ -133,31 +137,62 @@ const Product = () => {
               </select>
             </div>
 
-            {/* Replace the lens button section */}
+            {/* Lens Selection Section */}
             {['eyeglasses', 'sunglasses'].includes(product.category) && (
-              <>
-                <button
-                  onClick={() => setShowLensSelector(true)}
-                  className="w-full py-3 px-8 rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  {selectedLensOptions ? 'Change Lens Options' : 'Select Lens'}
-                </button>
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h3 className="font-semibold">Lens Options</h3>
+                    <p className="text-sm text-gray-600">
+                      {selectedLensOptions
+                        ? 'Selected lens and coating'
+                        : 'Select your prescription and lens options'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowLensSelector(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    {selectedLensOptions ? 'Change Options' : 'Select Options'}
+                  </button>
+                </div>
+
                 {selectedLensOptions && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    Selected lens price: Rs.{selectedLensOptions.totalPrice}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-600">Lens Type</p>
+                        <p className="font-medium">{selectedLensOptions.type}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Coating</p>
+                        <p className="font-medium">{selectedLensOptions.coating}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-gray-600">Additional Cost</p>
+                        <p className="font-medium text-red-600">
+                          + Rs. {selectedLensOptions.price?.toLocaleString() || 0}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
-            {showLensSelector && (
-              <LensSelector
-                onClose={() => setShowLensSelector(false)}
-                onSelectLens={setSelectedLensOptions}
-              />
+            {/* Total Price Section */}
+            {selectedLensOptions && (
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold">Total Price</span>
+                  <span className="text-2xl font-bold text-red-600">
+                    Rs. {((product.price || 0) + (selectedLensOptions.price || 0)) * quantity}
+                  </span>
+                </div>
+              </div>
             )}
 
-            {/* Existing add to cart button */}
+            {/* Add to Cart Button */}
             <button
               onClick={handleAddToCart}
               className={`w-full py-3 px-8 rounded-md text-white ${
@@ -172,6 +207,17 @@ const Product = () => {
           </div>
         </div>
       </div>
+
+      {/* Lens Selector Modal */}
+      {showLensSelector && (
+        <LensSelector
+          onClose={() => setShowLensSelector(false)}
+          onSelectLens={(options) => {
+            setSelectedLensOptions(options);
+            setShowLensSelector(false);
+          }}
+        />
+      )}
     </div>
   );
 };

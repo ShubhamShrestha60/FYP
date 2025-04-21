@@ -1,12 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FiUser, FiShoppingBag, FiEye, FiSettings, FiLogOut } from 'react-icons/fi';
+import { FiUser, FiShoppingBag, FiEye, FiSettings, FiLogOut, FiCalendar } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import UserAppointments from '../components/UserAppointments';
+import axios from 'axios';
+import { API_BASE_URL } from '../config/config';
+import { toast } from 'react-toastify';
 
 const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'prescriptions') {
+      fetchPrescriptions();
+    }
+  }, [activeTab]);
+
+  const fetchPrescriptions = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/prescriptions`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setPrescriptions(response.data);
+    } catch (error) {
+      console.error('Error fetching prescriptions:', error);
+      toast.error('Failed to fetch prescriptions');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -45,10 +72,82 @@ const Profile = () => {
       case 'prescriptions':
         return (
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">My Prescriptions</h2>
-            {/* Add prescriptions list here */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-semibold">My Prescriptions</h2>
+              <button
+                onClick={() => navigate('/prescription')}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Add New Prescription
+              </button>
+            </div>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+              </div>
+            ) : prescriptions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No prescriptions found. Add your first prescription to get started.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {prescriptions.map((prescription) => (
+                  <div
+                    key={prescription._id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-semibold text-lg">{prescription.patientName}</h3>
+                        <p className="text-gray-600">{new Date(prescription.prescriptionDate).toLocaleDateString()}</p>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm ${prescription.status === 'verified' ? 'bg-green-100 text-green-800' : prescription.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}
+                      >
+                        {prescription.status.charAt(0).toUpperCase() + prescription.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-medium mb-2">Right Eye</h4>
+                        <div className="space-y-1 text-sm">
+                          <p>Sphere: {prescription.rightEye.sphere}</p>
+                          <p>Cylinder: {prescription.rightEye.cylinder}</p>
+                          <p>Axis: {prescription.rightEye.axis}°</p>
+                          <p>PD: {prescription.rightEye.pd} mm</p>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Left Eye</h4>
+                        <div className="space-y-1 text-sm">
+                          <p>Sphere: {prescription.leftEye.sphere}</p>
+                          <p>Cylinder: {prescription.leftEye.cylinder}</p>
+                          <p>Axis: {prescription.leftEye.axis}°</p>
+                          <p>PD: {prescription.leftEye.pd} mm</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t">
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Type:</span> {prescription.prescriptionType}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Usage:</span> {prescription.usage}
+                      </p>
+                      {prescription.addition && (
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Addition:</span> {prescription.addition}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
+      case 'appointments':
+        return <UserAppointments />;
       case 'settings':
         return (
           <div className="bg-white p-6 rounded-lg shadow-md">
@@ -103,6 +202,14 @@ const Profile = () => {
                   <FiEye /> Prescriptions
                 </button>
                 <button
+                  onClick={() => setActiveTab('appointments')}
+                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                    activeTab === 'appointments' ? 'bg-red-500 text-white' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <FiCalendar /> Appointments
+                </button>
+                <button
                   onClick={() => setActiveTab('settings')}
                   className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'settings' ? 'bg-red-500 text-white' : 'hover:bg-gray-100'
@@ -130,4 +237,4 @@ const Profile = () => {
   );
 };
 
-export default Profile; 
+export default Profile;

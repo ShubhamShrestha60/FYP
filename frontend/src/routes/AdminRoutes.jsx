@@ -9,6 +9,7 @@ import AdminUsers from '../pages/admin/AdminUsers';
 import AdminSettings from '../pages/admin/AdminSettings';
 import AdminPrescriptions from '../pages/admin/AdminPrescriptions';
 import LensPowerManagement from '../components/admin/LensPowerManagement';
+import DoctorManagement from '../components/admin/DoctorManagement';
 import { useAuth } from '../context/AuthContext';
 
 const AdminRoutes = () => {
@@ -44,6 +45,7 @@ const AdminRoutes = () => {
         <Route path="settings" element={<AdminSettings />} />
         <Route path="prescriptions" element={<AdminPrescriptions />} />
         <Route path="lens" element={<LensPowerManagement />} />
+        <Route path="doctors" element={<DoctorManagement />} />
       </Route>
 
       {/* Catch all route */}

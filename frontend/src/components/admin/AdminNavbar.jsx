@@ -25,6 +25,7 @@ const AdminNavbar = () => {
             <Link to="/admin/users" className="hover:text-red-500">Users</Link>
             <Link to="/admin/settings" className="hover:text-red-500">Settings</Link>
             <Link to="/admin/prescriptions" className="hover:text-red-500">Prescriptions</Link>
+            <Link to="/admin/doctors" className="hover:text-red-500">Doctors</Link>
             <button
               onClick={handleLogout}
               className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"

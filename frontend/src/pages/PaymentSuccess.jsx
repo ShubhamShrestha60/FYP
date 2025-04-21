@@ -1,54 +1,107 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { khaltiService } from '../services/khaltiService';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const PaymentSuccess = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const [verifying, setVerifying] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const verifyPayment = async () => {
-            const params = new URLSearchParams(location.search);
-            const pidx = params.get('pidx');
-            const paymentStatus = params.get('status');
-            
-            // Get stored payment details
-            const paymentDetails = JSON.parse(localStorage.getItem('khalti_payment_details') || '{}');
-            
             try {
-                if (!pidx || paymentStatus !== 'Completed') {
-                    throw new Error('Payment was not completed');
+                const params = new URLSearchParams(location.search);
+                const pidx = params.get('pidx');
+                const status = params.get('status');
+                
+                // Get stored order details
+                const pendingOrder = JSON.parse(localStorage.getItem('pending_order') || '{}');
+                
+                if (!pidx) {
+                    throw new Error('Payment ID not found');
                 }
-                
-                const response = await khaltiService.verifyPayment({ 
-                    pidx,
-                    orderId: paymentDetails.orderId
-                });
-                
-                // Clear payment details from localStorage
-                localStorage.removeItem('khalti_payment_details');
-                
-                toast.success('Payment verified successfully!');
-                navigate('/order-confirmation');
+
+                if (!pendingOrder.orderId) {
+                    throw new Error('Order details not found');
+                }
+
+                if (status !== 'Completed') {
+                    throw new Error('Payment was not completed successfully');
+                }
+
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    throw new Error('Authentication token not found');
+                }
+
+                const response = await axios.post(
+                    'http://localhost:5001/api/payment/khalti/verify',
+                    {
+                        pidx,
+                        orderId: pendingOrder.orderId
+                    },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                if (response.data && response.data.status === 'success') {
+                    toast.success('Payment verified successfully!');
+                    // Clear stored order details
+                    localStorage.removeItem('pending_order');
+                    navigate(`/order-success/${pendingOrder.orderId}`);
+                } else {
+                    throw new Error(response.data?.message || 'Payment verification failed');
+                }
             } catch (error) {
                 console.error('Payment verification error:', error);
-                toast.error(error.message || 'Payment verification failed');
+                const errorMessage = error.response?.data?.message || error.message || 'Payment verification failed';
+                setError(errorMessage);
+                toast.error(errorMessage);
                 navigate('/cart');
+            } finally {
+                setVerifying(false);
             }
         };
 
         verifyPayment();
     }, [location, navigate]);
 
-    return (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-                <h2 className="text-2xl font-bold mb-4">Verifying Payment...</h2>
-                <p>Please wait while we verify your payment.</p>
+    if (verifying) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center p-8 bg-white rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold mb-4">Verifying Payment</h2>
+                    <p className="text-gray-600 mb-4">Please wait while we verify your payment...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center p-8 bg-white rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold mb-4 text-red-600">Payment Verification Failed</h2>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <button
+                        onClick={() => navigate('/cart')}
+                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
+                    >
+                        Return to Cart
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return null;
 };
 
 export default PaymentSuccess;

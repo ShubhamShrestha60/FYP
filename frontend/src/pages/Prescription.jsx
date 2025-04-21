@@ -13,6 +13,7 @@ const Prescription = () => {
   const [loading, setLoading] = useState(false);
   const [savedPrescriptions, setSavedPrescriptions] = useState([]);
   const [prescription, setPrescription] = useState({
+    patientName: '',
     rightEye: {
       sphere: '',
       cylinder: '',
@@ -119,6 +120,7 @@ const Prescription = () => {
 
     try {
       const prescriptionData = {
+        patientName: prescription.patientName,
         rightEye: {
           sphere: Number(prescription.rightEye.sphere),
           cylinder: Number(prescription.rightEye.cylinder),
@@ -159,6 +161,7 @@ const Prescription = () => {
         toast.success('Prescription saved successfully');
         fetchPrescriptions();
         setPrescription({
+          patientName: '',
           rightEye: { sphere: '', cylinder: '', axis: '', pd: '' },
           leftEye: { sphere: '', cylinder: '', axis: '', pd: '' },
           addition: '',
@@ -337,6 +340,10 @@ const Prescription = () => {
             <h3 className="font-semibold text-lg mb-3 text-gray-700">Prescription Details</h3>
             <div className="space-y-3">
               <div>
+                <p className="text-sm text-gray-500">Patient Name</p>
+                <p className="font-medium">{p.patientName}</p>
+              </div>
+              <div>
                 <p className="text-sm text-gray-500">Type</p>
                 <p className="font-medium">{p.prescriptionType}</p>
               </div>
@@ -431,6 +438,19 @@ const Prescription = () => {
       <h1 className="text-2xl font-bold mb-6">Enter Your Prescription</h1>
       
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
+        {/* Prescription Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Patient Name</label>
+          <input
+            type="text"
+            required
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+            value={prescription.patientName}
+            onChange={(e) => setPrescription({...prescription, patientName: e.target.value})}
+            placeholder="Enter patient's name"
+          />
+        </div>
+
         {/* Right Eye */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4">Right Eye (OD)</h2>

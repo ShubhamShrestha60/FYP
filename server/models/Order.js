@@ -2,25 +2,59 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
   customer: {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true }
+    name: { type: String, required: [true, 'Customer name is required'] },
+    email: { 
+      type: String, 
+      required: [true, 'Customer email is required'],
+      match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    },
+    phone: { 
+      type: String, 
+      required: [true, 'Customer phone is required'],
+      match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
+    }
   },
   shippingAddress: {
-    street: { type: String, required: true },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    postalCode: { type: String, required: true },
-    country: { type: String, required: true }
+    street: { type: String, required: [true, 'Street address is required'] },
+    city: { type: String, required: [true, 'City is required'] },
+    state: { type: String, required: [true, 'State is required'] },
+    postalCode: { 
+      type: String,
+      default: ''
+    },
+    country: { type: String, required: [true, 'Country is required'] }
   },
   items: [{
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    quantity: { type: Number, required: true },
-    price: { type: Number, required: true }
+    product: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Product', 
+      required: [true, 'Product reference is required'] 
+    },
+    quantity: { 
+      type: Number, 
+      required: [true, 'Quantity is required'],
+      min: [1, 'Quantity must be at least 1']
+    },
+    price: { 
+      type: Number, 
+      required: [true, 'Price is required'],
+      min: [0, 'Price cannot be negative']
+    }
   }],
-  subtotal: { type: Number, required: true },
-  shippingCost: { type: Number, required: true },
-  total: { type: Number, required: true },
+  subtotal: { 
+    type: Number, 
+    required: [true, 'Subtotal is required'],
+    min: [0, 'Subtotal cannot be negative']
+  },
+  shippingCost: { 
+    type: Number, 
+    default: 0
+  },
+  total: { 
+    type: Number, 
+    required: [true, 'Total is required'],
+    min: [0, 'Total cannot be negative']
+  },
   status: {
     type: String,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
@@ -29,12 +63,20 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     enum: ['cod', 'esewa', 'khalti'],
-    required: true
+    required: [true, 'Payment method is required']
   },
   paymentStatus: {
     type: String,
     enum: ['pending', 'paid', 'failed'],
     default: 'pending'
+  },
+  trackingNumber: {
+    type: String,
+    default: null
+  },
+  notes: {
+    type: String,
+    default: ''
   },
   createdAt: {
     type: Date,

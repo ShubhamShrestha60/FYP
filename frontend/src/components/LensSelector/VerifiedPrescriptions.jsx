@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const VerifiedPrescriptions = ({ prescriptionType, onSelectPrescription, onBack }) => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth(); // Only get user from context
+  const [selectedPrescription, setSelectedPrescription] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchVerifiedPrescriptions = async () => {
@@ -16,13 +18,6 @@ const VerifiedPrescriptions = ({ prescriptionType, onSelectPrescription, onBack 
           return;
         }
 
-        console.log('Attempting to fetch with:', {
-          type: prescriptionType,
-          userId: user._id,
-          hasToken: !!token
-        });
-
-        // Updated API endpoint to use query parameters instead of URL params
         const response = await axios.get(
           'http://localhost:5001/api/prescriptions',
           {
@@ -38,22 +33,14 @@ const VerifiedPrescriptions = ({ prescriptionType, onSelectPrescription, onBack 
           }
         );
 
-        // Add debug logging
-        console.log('Received prescriptions:', response.data);
-        console.log('Filtered status:', response.data.map(p => p.status));
-
-        // Filter again on client side just to be safe
         const verifiedPrescriptions = response.data.filter(p => 
           p.status === 'verified' && p.prescriptionType === prescriptionType
         );
 
         setPrescriptions(verifiedPrescriptions);
       } catch (error) {
-        console.error('Error details:', {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data
-        });
+        console.error('Error fetching prescriptions:', error);
+        toast.error('Failed to fetch prescriptions');
       } finally {
         setLoading(false);
       }
@@ -62,8 +49,17 @@ const VerifiedPrescriptions = ({ prescriptionType, onSelectPrescription, onBack 
     fetchVerifiedPrescriptions();
   }, [prescriptionType, user]);
 
+  const handlePrescriptionSelect = (prescription) => {
+    setSelectedPrescription(prescription);
+    onSelectPrescription(prescription);
+  };
+
   if (loading) {
-    return <div className="text-center py-4">Loading prescriptions...</div>;
+    return (
+      <div className="flex justify-center items-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   if (prescriptions.length === 0) {
@@ -99,14 +95,22 @@ const VerifiedPrescriptions = ({ prescriptionType, onSelectPrescription, onBack 
           ← Back
         </button>
       </div>
+
       <div className="space-y-4">
         {prescriptions.map((prescription) => (
           <div
             key={prescription._id}
-            onClick={() => onSelectPrescription(prescription)}
-            className="border rounded-lg p-4 hover:border-blue-500 cursor-pointer transition-all"
+            onClick={() => handlePrescriptionSelect(prescription)}
+            className={`border rounded-lg p-4 cursor-pointer transition-all ${
+              selectedPrescription?._id === prescription._id 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'hover:border-blue-500'
+            }`}
           >
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 mb-2">
+                <p className="font-medium">Patient Name: {prescription.patientName}</p>
+              </div>
               <div>
                 <p className="font-medium mb-2">Right Eye (OD)</p>
                 <div className="text-sm space-y-1">

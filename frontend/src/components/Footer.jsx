@@ -101,6 +101,11 @@ const Footer = () => {
                   Prescription Services
                 </Link>
               </li>
+              <li>
+                <Link to="/appointment" className="text-gray-400 hover:text-red-500 transition-colors">
+                  Book Eye Exam
+                </Link>
+              </li>
             </ul>
           </motion.div>
 

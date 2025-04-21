@@ -5,6 +5,7 @@ const { auth, isAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const cloudinaryStorage = require('../middleware/cloudinaryStorage');
 const mongoose = require('mongoose');
+const { sendPrescriptionStatusNotification } = require('../services/emailService');
 
 // Define validation function before creating router
 function validateEyeData(eyeData, eyeName) {
@@ -57,6 +58,7 @@ router.post('/', auth, async (req, res) => {
     // Create base prescription data
     const prescriptionData = {
       userId: req.user.id,
+      patientName: req.body.patientName, //New LIne added
       rightEye: {
         sphere: Number(req.body.rightEye.sphere),
         cylinder: Number(req.body.rightEye.cylinder),
@@ -174,6 +176,20 @@ router.patch('/:id/verify', isAdmin, async (req, res) => {
     await prescription.save();
 
     const updatedPrescription = await prescription.populate('userId', 'name email');
+
+    // Send email notification for prescription status update
+    if (status === 'rejected' || status === 'verified') {
+      await sendPrescriptionStatusNotification(
+        updatedPrescription.userId.email,
+        {
+          status,
+          verificationNotes,
+          prescriptionType: prescription.prescriptionType,
+          usage: prescription.usage
+        }
+      );
+    }
+
     res.json(updatedPrescription);
   } catch (error) {
     console.error('Verification error:', error);

@@ -7,7 +7,11 @@ const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const khaltiRoutes = require('./routes/payment/khaltiRoutes');
-const lensRoutes = require('./routes/lensRoutes');
+const lensRoutes = require('./routes/lens');
+const comparisonRoutes = require('./routes/comparisonRoutes');
+const userRoutes = require('./routes/users');
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
 
 const app = express();
 
@@ -34,8 +38,11 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/lens', lensRoutes);
-
+app.use('/api/comparison', comparisonRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/payment/khalti', khaltiRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/doctors', doctorRoutes);
 
 // 404 handler
 app.use((req, res) => {

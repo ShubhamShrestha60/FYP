@@ -6,6 +6,11 @@ const prescriptionSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  patientName: {
+    type: String,
+    required: true,
+    trim: true
+  },
   rightEye: {
     sphere: { 
       type: Number, 
@@ -105,4 +110,4 @@ const prescriptionSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Prescription', prescriptionSchema); 
+module.exports = mongoose.model('Prescription', prescriptionSchema);

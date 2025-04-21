@@ -19,9 +19,14 @@ import Frame from "../components/Frame1";
 import ProductNav from "../pages/ProductNav";
 import Payment from "../Products/Payment";
 import Profile from "../pages/Profile";
+import Appointment from "../pages/Appointment";
+import DoctorManagement from "../components/admin/DoctorManagement";
+
 import AdminPrescriptions from '../pages/admin/AdminPrescriptions';
 import AdminDashboard from "../components/admin/AdminDashboard";
 import AdminLogin from "../pages/admin/AdminLogin";
+import LensSelection from "../pages/LensSelection";
+
 import { useAuth } from "../context/AuthContext";
 
 //For admin part 
@@ -46,14 +51,18 @@ const AllRoutes = () => {
       <Route path="/sunglasses" element={<Sunglasses />} />
       <Route path="/eyeglasses" element={<Eyeglasses />} />
       <Route path="/prescription" element={<Prescription />} />
+      <Route path="/lens-selection/:prescriptionId" element={<LensSelection />} />
       <Route path="/contactlens" element={<ContactLens />} />
       <Route path="/tryon" element={<TryOn />} />
       <Route path="/frame" element={<Frame />} />
       <Route path='/pronav' element={<ProductNav/>}/>
       <Route path='/payment' element={<Payment/>}/>
       <Route path="/profile" element={<Profile />} />
+      <Route path="/appointment" element={<Appointment />} />
+      
       <Route path="/admin" element={adminUser ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
       <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/doctors" element={adminUser ? <DoctorManagement /> : <Navigate to="/admin/login" />} />
     </Routes>
   );
 };

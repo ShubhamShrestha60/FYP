@@ -44,8 +44,7 @@ const Checkout = () => {
     
     try {
       const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const shippingCost = 150;
-      const total = subtotal + shippingCost;
+      const total = subtotal; // No shipping cost
   
       const orderData = {
         customer: {
@@ -57,7 +56,7 @@ const Checkout = () => {
           street: formData.street,
           city: formData.city,
           state: formData.state,
-          postalCode: formData.postalCode,
+          postalCode: formData.postalCode || '', // Make postal code optional
           country: formData.country
         },
         items: cart.map(item => ({
@@ -66,7 +65,7 @@ const Checkout = () => {
           price: item.price
         })),
         subtotal,
-        shippingCost,
+        shippingCost: 0, // Free shipping
         total,
         paymentMethod: formData.paymentMethod
       };
