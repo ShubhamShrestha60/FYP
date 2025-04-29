@@ -30,7 +30,11 @@ router.get('/:id', async (req, res) => {
 // Create product (admin only)
 router.post('/', isAdmin, async (req, res) => {
   try {
-    const product = new Product(req.body);
+    //added section for virtual try on images
+    const product = new Product({
+      ...req.body,
+      virtualTryOnImages: req.body.virtualTryOnImages || []
+    });
     const savedProduct = await product.save();
     res.status(201).json(savedProduct);
   } catch (error) {
@@ -66,6 +70,8 @@ router.put('/:id', isAdmin, async (req, res) => {
       productId,
       { 
         ...updates,
+        //added section for virtual try on images
+        virtualTryOnImages: updates.virtualTryOnImages || [],
         updatedAt: Date.now()
       },
       { new: true, runValidators: true }

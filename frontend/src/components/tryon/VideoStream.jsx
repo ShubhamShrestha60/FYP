@@ -30,13 +30,16 @@ const VideoStream = () => {
             wsClient.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'face_detection') {
+                    // Handle JSON messages (status updates, frame switches)
+                    if (data.status) {
+                        console.log(data.message);
+                        return;
+                    } else if (data.type === 'face_detection') {
                         setFaceDetected(data.detected);
-                        setProcessedImage(data.image);
-                    } else {
-                        setProcessedImage(event.data);
+                        if (data.image) setProcessedImage(data.image);
                     }
                 } catch (e) {
+                    // Handle binary image data
                     setProcessedImage(event.data);
                 }
             };

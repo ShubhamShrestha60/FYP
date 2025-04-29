@@ -35,6 +35,11 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   }],
+  //added section for virtual try on images
+  virtualTryOnImages: [{
+    type: String,
+    required: false
+  }],
   specifications: {
     frameSize: String,
     frameWidth: String,

@@ -16,6 +16,7 @@ const AdminProducts = () => {
     description: '',
     stock: '',
     images: [],
+    virtualTryOnImages: [],
     specifications: {
       frameSize: '',
       frameWidth: '',
@@ -80,7 +81,7 @@ const AdminProducts = () => {
     }
   };
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = async (e, isVirtualTryOn = false) => {
     try {
       setLoading(true);
       const files = Array.from(e.target.files);
@@ -90,19 +91,20 @@ const AdminProducts = () => {
         formData.append('images', file);
       });
 
-      console.log('Admin token:', localStorage.getItem('adminToken')); // Debug log
-
       const response = await axiosInstance.post('/products/upload', formData);
-      console.log('Upload response:', response); // Debug log
+      console.log('Upload response:', response);
 
       setFormData(prev => ({
         ...prev,
-        images: [...prev.images, ...response.data.imageUrls]
+        [isVirtualTryOn ? 'virtualTryOnImages' : 'images']: [
+          ...prev[isVirtualTryOn ? 'virtualTryOnImages' : 'images'],
+          ...response.data.imageUrls
+        ]
       }));
       toast.success('Images uploaded successfully');
     } catch (error) {
       console.error('Error uploading images:', error);
-      console.log('Error response:', error.response); // Debug log
+      console.log('Error response:', error.response);
       toast.error(error.response?.data?.message || 'Error uploading images');
     } finally {
       setLoading(false);
@@ -139,6 +141,7 @@ const AdminProducts = () => {
       description: formData.description,
       stock: Number(formData.stock),
       images: formData.images,
+      virtualTryOnImages: formData.virtualTryOnImages,
       specifications: {
         frameSize: formData.specifications?.frameSize || '',
         frameWidth: formData.specifications?.frameWidth || '',
@@ -213,6 +216,7 @@ const AdminProducts = () => {
       description: '',
       stock: '',
       images: [],
+      virtualTryOnImages: [],
       specifications: {
         frameSize: '',
         frameWidth: '',
@@ -332,12 +336,12 @@ const AdminProducts = () => {
 
               {/* Images */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Images</label>
+                <label className="block text-sm font-medium text-gray-700">Product Images</label>
                 <input
                   type="file"
                   accept="image/*"
                   multiple
-                  onChange={handleImageUpload}
+                  onChange={(e) => handleImageUpload(e, false)}
                   className="mt-1 block w-full"
                 />
                 <div className="mt-2 grid grid-cols-4 gap-2">
@@ -354,6 +358,41 @@ const AdminProducts = () => {
                           setFormData(prev => ({
                             ...prev,
                             images: prev.images.filter((_, i) => i !== index)
+                          }));
+                        }}
+                        className="absolute top-0 right-0 bg-red-600 text-white p-1 rounded-full"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Virtual Try-On Images */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Virtual Try-On Images</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleImageUpload(e, true)}
+                  className="mt-1 block w-full"
+                />
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {formData.virtualTryOnImages.map((url, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={url}
+                        alt={`Virtual Try-On ${index + 1}`}
+                        className="w-full h-24 object-cover rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            virtualTryOnImages: prev.virtualTryOnImages.filter((_, i) => i !== index)
                           }));
                         }}
                         className="absolute top-0 right-0 bg-red-600 text-white p-1 rounded-full"
