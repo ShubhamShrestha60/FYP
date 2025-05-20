@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { FiCheckCircle } from 'react-icons/fi';
+import { useCart } from '../context/CartContext';
 
 const OrderSuccess = () => {
   const { orderId } = useParams();
+  const { clearCart } = useCart();
+
+  useEffect(() => {
+    clearCart();
+    // eslint-disable-next-line
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

@@ -8,6 +8,15 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [statusModal, setStatusModal] = useState({ show: false, order: null });
+  const [statusForm, setStatusForm] = useState({
+    status: '',
+    trackingNumber: '',
+    carrier: '',
+    estimatedDelivery: '',
+    reason: '',
+    notes: ''
+  });
 
   useEffect(() => {
     fetchOrders();
@@ -16,12 +25,12 @@ const AdminOrders = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5001/api/orders/admin', {
+      const response = await axios.get('http://localhost:5001/api/orders/admin/orders', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
-      setOrders(response.data);
+      setOrders(response.data.orders);
     } catch (error) {
       toast.error('Failed to fetch orders');
     } finally {
@@ -29,15 +38,40 @@ const AdminOrders = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId, newStatus) => {
+  const handleStatusChange = (order) => {
+    setStatusModal({ show: true, order });
+    setStatusForm({
+      status: '',
+      trackingNumber: '',
+      carrier: '',
+      estimatedDelivery: '',
+      reason: '',
+      notes: ''
+    });
+  };
+
+  const updateOrderStatus = async (e) => {
+    e.preventDefault();
     try {
-      await axios.patch(`http://localhost:5001/api/orders/${orderId}/status`, {
-        status: newStatus
-      });
-      toast.success('Order status updated');
-      fetchOrders();
+      const { order } = statusModal;
+      const response = await axios.patch(
+        `http://localhost:5001/api/orders/admin/orders/${order._id}/status`,
+        statusForm,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+          }
+        }
+      );
+
+      if (response.data.message) {
+        toast.success(response.data.message);
+        setStatusModal({ show: false, order: null });
+        fetchOrders();
+      }
     } catch (error) {
-      toast.error('Error updating order status');
+      toast.error(error.response?.data?.message || 'Error updating order status');
+      console.error('Error updating order status:', error);
     }
   };
 
@@ -50,6 +84,39 @@ const AdminOrders = () => {
       cancelled: '#EF4444'
     };
     return colors[status] || '#6B7280';
+  };
+
+  const getStatusTransitions = (currentStatus) => {
+    const transitions = {
+      pending: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered', 'cancelled'],
+      delivered: ['cancelled'],
+      cancelled: []
+    };
+    return transitions[currentStatus] || [];
+  };
+
+  const getStatusRequirements = (status) => {
+    const requirements = {
+      shipped: {
+        required: ['trackingNumber', 'carrier'],
+        optional: ['estimatedDelivery', 'notes']
+      },
+      cancelled: {
+        required: ['reason'],
+        optional: ['notes']
+      },
+      processing: {
+        required: [],
+        optional: ['notes', 'estimatedDelivery']
+      },
+      delivered: {
+        required: [],
+        optional: ['notes']
+      }
+    };
+    return requirements[status] || { required: [], optional: [] };
   };
 
   const viewOrderDetails = (order) => {
@@ -140,21 +207,15 @@ const AdminOrders = () => {
                     {new Date(order.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <select
-                      value={order.status}
-                      onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                      className="text-sm rounded-full px-3 py-1"
+                    <button
+                      onClick={() => handleStatusChange(order)}
+                      className={`text-sm rounded-full px-3 py-1 text-white`}
                       style={{
-                        backgroundColor: getStatusColor(order.status),
-                        color: 'white'
+                        backgroundColor: getStatusColor(order.status)
                       }}
                     >
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     Rs. {order.total.toFixed(2)}
@@ -179,6 +240,149 @@ const AdminOrders = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Status Update Modal */}
+      {statusModal.show && statusModal.order && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                Update Order Status
+              </h2>
+              <button
+                onClick={() => setStatusModal({ show: false, order: null })}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={updateOrderStatus} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Status
+                </label>
+                <select
+                  value={statusForm.status}
+                  onChange={(e) => {
+                    setStatusForm(prev => ({
+                      ...prev,
+                      status: e.target.value
+                    }));
+                  }}
+                  className="w-full border rounded-md p-2"
+                  required
+                >
+                  <option value="">Select Status</option>
+                  {getStatusTransitions(statusModal.order.status).map(status => (
+                    <option key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {statusForm.status === 'shipped' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tracking Number *
+                    </label>
+                    <input
+                      type="text"
+                      value={statusForm.trackingNumber}
+                      onChange={(e) => setStatusForm(prev => ({
+                        ...prev,
+                        trackingNumber: e.target.value
+                      }))}
+                      className="w-full border rounded-md p-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Carrier *
+                    </label>
+                    <input
+                      type="text"
+                      value={statusForm.carrier}
+                      onChange={(e) => setStatusForm(prev => ({
+                        ...prev,
+                        carrier: e.target.value
+                      }))}
+                      className="w-full border rounded-md p-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Estimated Delivery
+                    </label>
+                    <input
+                      type="date"
+                      value={statusForm.estimatedDelivery}
+                      onChange={(e) => setStatusForm(prev => ({
+                        ...prev,
+                        estimatedDelivery: e.target.value
+                      }))}
+                      className="w-full border rounded-md p-2"
+                    />
+                  </div>
+                </>
+              )}
+
+              {statusForm.status === 'cancelled' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cancellation Reason *
+                  </label>
+                  <textarea
+                    value={statusForm.reason}
+                    onChange={(e) => setStatusForm(prev => ({
+                      ...prev,
+                      reason: e.target.value
+                    }))}
+                    className="w-full border rounded-md p-2"
+                    required
+                    rows="3"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={statusForm.notes}
+                  onChange={(e) => setStatusForm(prev => ({
+                    ...prev,
+                    notes: e.target.value
+                  }))}
+                  className="w-full border rounded-md p-2"
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setStatusModal({ show: false, order: null })}
+                  className="px-4 py-2 border rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Update Status
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Order Details Modal */}
       {selectedOrder && (
@@ -232,7 +436,15 @@ const AdminOrders = () => {
                     <tbody className="divide-y divide-gray-200">
                       {selectedOrder.items.map((item, index) => (
                         <tr key={index}>
-                          <td className="px-4 py-2">{item.product.name}</td>
+                          <td className="px-4 py-2">{item.product.name}
+                            {item.lensOptions && item.lensOptions.type && (
+                              <div className="mt-1 text-xs text-gray-600">
+                                <div>Lens Type: <span className="font-semibold">{item.lensOptions.type}</span></div>
+                                {item.lensOptions.coating && <div>Coating: <span className="font-semibold">{item.lensOptions.coating}</span></div>}
+                                {item.lensOptions.price > 0 && <div>Lens Price: <span className="font-semibold">Rs. {item.lensOptions.price}</span></div>}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-4 py-2">{item.quantity}</td>
                           <td className="px-4 py-2">Rs. {item.price.toFixed(2)}</td>
                           <td className="px-4 py-2">Rs. {(item.price * item.quantity).toFixed(2)}</td>

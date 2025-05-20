@@ -62,7 +62,13 @@ const Checkout = () => {
         items: cart.map(item => ({
           product: item._id,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
+          lensOptions: item.lensOptions ? {
+            type: item.lensOptions.type,
+            coating: item.lensOptions.coating,
+            prescription: item.lensOptions.prescription?._id,
+            price: item.lensOptions.price || 0
+          } : null
         })),
         subtotal,
         shippingCost: 0, // Free shipping

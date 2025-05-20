@@ -6,6 +6,7 @@ import UserAppointments from '../components/UserAppointments';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/config';
 import { toast } from 'react-toastify';
+import Orders from './Orders';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -63,12 +64,7 @@ const Profile = () => {
           </div>
         );
       case 'orders':
-        return (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">My Orders</h2>
-            {/* Add orders list here */}
-          </div>
-        );
+        return <Orders />;
       case 'prescriptions':
         return (
           <div className="bg-white p-6 rounded-lg shadow-md">

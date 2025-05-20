@@ -26,7 +26,7 @@ const Cart = () => {
           {/* Cart Items */}
           <div className="lg:col-span-2">
             {cart.map(item => (
-              <div key={item._id} className="bg-white rounded-lg shadow-md p-6 mb-4">
+              <div key={item._id + JSON.stringify(item.lensOptions)} className="bg-white rounded-lg shadow-md p-6 mb-4">
                 <div className="flex items-center">
                   <img
                     src={item.images[0]}
@@ -36,7 +36,15 @@ const Cart = () => {
                   <div className="flex-1 ml-4">
                     <h3 className="font-semibold">{item.name}</h3>
                     <p className="text-gray-600">{item.brand}</p>
-                    <p className="text-red-600 font-semibold">Rs. {item.price}</p>
+                    <p className="text-gray-500">Base Price: Rs. {item.basePrice}</p>
+                    {item.lensOptions && item.lensOptions.price ? (
+                      <>
+                        <p className="text-gray-500">Lens Price: Rs. {item.lensOptions.price}</p>
+                        <p className="text-gray-500">Lens Type: {item.lensOptions.type}</p>
+                        <p className="text-gray-500">Coating: {item.lensOptions.coating}</p>
+                      </>
+                    ) : null}
+                    <p className="text-red-600 font-semibold">Total: Rs. {item.price}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button

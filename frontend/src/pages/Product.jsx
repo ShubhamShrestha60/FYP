@@ -31,18 +31,16 @@ const Product = () => {
   };
 
   const handleAddToCart = () => {
-    if (['eyeglasses', 'sunglasses'].includes(product.category) && !selectedLensOptions) {
-      alert('Please select lens options before adding to cart');
-      return;
-    }
-
+    // No check needed; allow adding to cart with or without lens options
     const productWithLens = {
       ...product,
       quantity,
-      lensOptions: selectedLensOptions
+      lensOptions: selectedLensOptions,
+      price: (product.price || 0) + (selectedLensOptions?.price || 0)
     };
+    console.log("Adding to cart:", productWithLens);
     addToCart(productWithLens);
-    alert('Product added to cart!');
+    alert("Product added to cart!");
   };
 
   if (loading) {
@@ -190,6 +188,17 @@ const Product = () => {
                   </span>
                 </div>
               </div>
+            )}
+
+            {/* Try On Button - Only show for eyeglasses and sunglasses with virtual try-on images */}
+            {(product.category === 'eyeglasses' || product.category === 'sunglasses') && 
+             product.virtualTryOnImages && product.virtualTryOnImages.length > 0 && (
+              <button
+                onClick={() => navigate(`/tryon?productId=${product._id}`)}
+                className="w-full py-3 px-8 rounded-md text-white bg-blue-500 hover:bg-blue-600 mb-3"
+              >
+                Virtual Try On
+              </button>
             )}
 
             {/* Add to Cart Button */}

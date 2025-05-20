@@ -16,7 +16,7 @@ const PaymentSuccess = () => {
                 const pidx = params.get('pidx');
                 const status = params.get('status');
                 
-                // Get stored order details
+                // Get stored order details from localStorage
                 const pendingOrder = JSON.parse(localStorage.getItem('pending_order') || '{}');
                 
                 if (!pidx) {
@@ -24,7 +24,7 @@ const PaymentSuccess = () => {
                 }
 
                 if (!pendingOrder.orderId) {
-                    throw new Error('Order details not found');
+                    throw new Error('Order details not found. Please contact support.');
                 }
 
                 if (status !== 'Completed') {
@@ -33,8 +33,10 @@ const PaymentSuccess = () => {
 
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    throw new Error('Authentication token not found');
+                    throw new Error('Authentication token not found. Please log in again.');
                 }
+
+                console.log('Verifying payment with:', { pidx, orderId: pendingOrder.orderId });
 
                 const response = await axios.post(
                     'http://localhost:5001/api/payment/khalti/verify',
@@ -51,9 +53,9 @@ const PaymentSuccess = () => {
                 );
 
                 if (response.data && response.data.status === 'success') {
-                    toast.success('Payment verified successfully!');
                     // Clear stored order details
                     localStorage.removeItem('pending_order');
+                    toast.success('Payment verified successfully!');
                     navigate(`/order-success/${pendingOrder.orderId}`);
                 } else {
                     throw new Error(response.data?.message || 'Payment verification failed');
@@ -63,7 +65,7 @@ const PaymentSuccess = () => {
                 const errorMessage = error.response?.data?.message || error.message || 'Payment verification failed';
                 setError(errorMessage);
                 toast.error(errorMessage);
-                navigate('/cart');
+                // Don't navigate away immediately, let the user see the error
             } finally {
                 setVerifying(false);
             }
@@ -90,12 +92,20 @@ const PaymentSuccess = () => {
                 <div className="text-center p-8 bg-white rounded-lg shadow-md">
                     <h2 className="text-2xl font-bold mb-4 text-red-600">Payment Verification Failed</h2>
                     <p className="text-gray-600 mb-4">{error}</p>
-                    <button
-                        onClick={() => navigate('/cart')}
-                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
-                    >
-                        Return to Cart
-                    </button>
+                    <div className="space-y-4">
+                        <button
+                            onClick={() => navigate('/cart')}
+                            className="block w-full bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
+                        >
+                            Return to Cart
+                        </button>
+                        <button
+                            onClick={() => navigate('/orders')}
+                            className="block w-full border border-blue-500 text-blue-500 px-6 py-2 rounded-lg hover:bg-blue-50"
+                        >
+                            View Orders
+                        </button>
+                    </div>
                 </div>
             </div>
         );

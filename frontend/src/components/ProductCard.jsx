@@ -1,12 +1,23 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const ProductCard = ({ product }) => {
+  // Check if product has virtual try-on images and is eyeglasses or sunglasses
+  const hasTryOnFeature = product.virtualTryOnImages && 
+                         product.virtualTryOnImages.length > 0 && 
+                         (product.category === 'eyeglasses' || product.category === 'sunglasses');
+  
+  const handleTryOnClick = (e) => {
+    e.preventDefault(); // Prevent navigation to product detail
+    window.location.href = `/tryon?productId=${product._id}`;
+  };
+
   return (
-    <Link
-      to={`/product/${product._id}`}
-      className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
-    >
+    <div className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
+      <Link
+        to={`/product/${product._id}`}
+        className="block"
+      >
       {/* Image Container with fixed aspect ratio and proper sizing */}
       <div className="relative w-full pt-[100%]"> {/* 1:1 aspect ratio */}
         <img
@@ -66,7 +77,20 @@ const ProductCard = ({ product }) => {
         </div>
       </div>
     </Link>
+    
+    {/* Try On Button - Only show for eyeglasses and sunglasses with virtual try-on images */}
+    {hasTryOnFeature && (
+      <div className="px-4 pb-4">
+        <button
+          onClick={handleTryOnClick}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors"
+        >
+          Virtual Try On
+        </button>
+      </div>
+    )}
+  </div>
   );
 };
 
-export default ProductCard; 
+export default ProductCard;

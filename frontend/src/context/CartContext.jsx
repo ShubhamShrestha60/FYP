@@ -16,15 +16,28 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (product, quantity = 1) => {
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item._id === product._id);
+      // Treat items as unique if their _id or lensOptions differ
+      const existingItem = prevCart.find(item =>
+        item._id === product._id &&
+        JSON.stringify(item.lensOptions) === JSON.stringify(product.lensOptions)
+      );
       if (existingItem) {
         return prevCart.map(item =>
-          item._id === product._id
+          item._id === product._id &&
+          JSON.stringify(item.lensOptions) === JSON.stringify(product.lensOptions)
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      return [...prevCart, { ...product, quantity }];
+      // Store basePrice for display
+      return [
+        ...prevCart,
+        {
+          ...product,
+          quantity,
+          basePrice: product.basePrice !== undefined ? product.basePrice : product.price - (product.lensOptions?.price || 0)
+        }
+      ];
     });
   };
 

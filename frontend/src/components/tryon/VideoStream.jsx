@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import FrameCatalog from "./FrameCatalog";
 import FaceShapeGuide from "./FaceShapeGuide";
 
-const VideoStream = () => {
+const VideoStream = ({ productTryOnImages, productId }) => {
     // Add new state for face detection and frame adjustments
     const [faceDetected, setFaceDetected] = useState(false);
     const [frameAdjustments, setFrameAdjustments] = useState({ x: 0, y: 0, scale: 1 });
@@ -143,11 +143,46 @@ const VideoStream = () => {
         return cleanup;
     }, [ws]);
 
+    useEffect(() => {
+        if (productTryOnImages && productTryOnImages.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
+            const initialFrameUrl = productTryOnImages[0];
+            // Only select if the currently selected frame is the default or no frame is selected
+            if (selectedFrame === 'sunglasses.png' || selectedFrame === '') {
+                 setSelectedFrame(initialFrameUrl);
+                 // Send the initial frame to the backend
+                 const frameId = `cloudinary_${initialFrameUrl.split('/').pop().split('.')[0]}`;
+                 ws.send(JSON.stringify({
+                     type: 'frame_select',
+                     frame: frameId,
+                     frame_url: initialFrameUrl
+                 }));
+            }
+        }
+    }, [productTryOnImages, ws, selectedFrame]);
+
     const handleFrameSelect = (frameImage) => {
         setSelectedFrame(frameImage);
         // Send frame selection to backend
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'frame_select', frame: frameImage }));
+            // Check if this is a Cloudinary URL (product try-on image)
+            if (frameImage.startsWith('http')) {
+                // Generate a unique frame ID based on the URL
+                const frameId = `cloudinary_${frameImage.split('/').pop().split('.')[0]}`;
+                ws.send(JSON.stringify({
+                    type: 'frame_select',
+                    frame: frameId,
+                    frame_url: frameImage
+                }));
+            } else {
+                // For local frames, use the default frame ID format
+                const frameName = frameImage.includes('/') 
+                    ? frameImage.split('/').pop() 
+                    : frameImage;
+                ws.send(JSON.stringify({
+                    type: 'frame_select',
+                    frame: `default_${frameName}`
+                }));
+            }
         }
     };
 
@@ -264,7 +299,10 @@ const VideoStream = () => {
                     )}
                 </div>
                 <div className="md:col-span-1 space-y-4">
-                    <FrameCatalog onFrameSelect={handleFrameSelect} />
+                    <FrameCatalog 
+                        onFrameSelect={handleFrameSelect} 
+                        productTryOnImages={productTryOnImages} 
+                    />
                     <FaceShapeGuide />
                 </div>
             </div>

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const { auth, isAdmin } = require('../middleware/auth');
+const { sendOrderStatusEmail } = require('../services/emailService');
 
 // Debug middleware
 router.use((req, res, next) => {
@@ -40,6 +41,7 @@ router.post('/', async (req, res) => {
 // Get user's orders (authenticated)
 router.get('/my-orders', auth, async (req, res) => {
   try {
+    console.log('Fetching orders for email:', req.user.email);
     const orders = await Order.find({ 'customer.email': req.user.email })
       .populate('items.product')
       .sort({ createdAt: -1 });
@@ -96,32 +98,143 @@ router.get('/admin/orders', async (req, res) => {
   }
 });
 
-// Update order status (admin only)
-router.patch('/admin/orders/:id/status', async (req, res) => {
+// Cancel order (user only)
+router.post('/:orderId/cancel', auth, async (req, res) => {
   try {
-    const { status, trackingNumber, notes } = req.body;
-    
-    if (!status || !['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
-    }
-    
-    const updateData = { status };
-    if (trackingNumber) updateData.trackingNumber = trackingNumber;
-    if (notes) updateData.notes = notes;
-    
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    ).populate('items.product');
+    const order = await Order.findOne({ _id: req.params.orderId, 'customer.email': req.user.email });
     
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-    
-    res.json(order);
+
+    if (order.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending orders can be cancelled' });
+    }
+
+    if (!req.body.reason) {
+      return res.status(400).json({ message: 'Cancellation reason is required' });
+    }
+
+    // Create status history entry
+    const statusHistoryEntry = {
+      status: 'cancelled',
+      changedBy: req.user._id,
+      reason: req.body.reason,
+      metadata: {
+        notes: 'Cancelled by customer'
+      }
+    };
+
+    // Update order
+    order.status = 'cancelled';
+    order.statusHistory.push(statusHistoryEntry);
+    await order.save();
+
+    // Send cancellation email
+    await sendOrderStatusEmail({
+      to: order.customer.email,
+      orderId: order._id,
+      status: 'cancelled',
+      customerName: order.customer.name,
+      reason: req.body.reason
+    });
+
+    res.json({ message: 'Order cancelled successfully' });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error cancelling order:', error);
+    res.status(500).json({ message: 'Error cancelling order' });
+  }
+});
+
+// Update order status (admin only)
+router.patch('/admin/orders/:orderId/status', isAdmin, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const { status, trackingNumber, carrier, estimatedDelivery, reason, notes } = req.body;
+
+    // Validate status transition
+    if (!order.canTransitionTo(status)) {
+      return res.status(400).json({ 
+        message: `Cannot transition from ${order.status} to ${status}` 
+      });
+    }
+
+    // Validate status change requirements
+    const validation = order.validateStatusChange(status, {
+      trackingNumber,
+      carrier,
+      estimatedDelivery,
+      reason,
+      notes
+    });
+
+    if (!validation.valid) {
+      return res.status(400).json({ message: validation.message });
+    }
+
+    // Create status history entry
+    const statusHistoryEntry = {
+      status,
+      changedBy: req.user._id,
+      reason,
+      metadata: {
+        trackingNumber,
+        carrier,
+        estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
+        notes
+      }
+    };
+
+    // Update order
+    order.status = status;
+    if (status === 'shipped') {
+      order.trackingNumber = trackingNumber;
+      order.carrier = carrier;
+    }
+    order.statusHistory.push(statusHistoryEntry);
+    await order.save();
+
+    // Send status update email
+    await sendOrderStatusEmail({
+      to: order.customer.email,
+      orderId: order._id,
+      status,
+      customerName: order.customer.name,
+      trackingNumber,
+      carrier,
+      estimatedDelivery,
+      reason,
+      notes
+    });
+
+    res.json({ 
+      message: 'Order status updated successfully',
+      order
+    });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ message: 'Error updating order status' });
+  }
+});
+
+// Get order status history (admin only)
+router.get('/admin/orders/:orderId/history', isAdmin, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId)
+      .populate('statusHistory.changedBy', 'name email');
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.json({ statusHistory: order.statusHistory });
+  } catch (error) {
+    console.error('Error fetching order history:', error);
+    res.status(500).json({ message: 'Error fetching order history' });
   }
 });
 

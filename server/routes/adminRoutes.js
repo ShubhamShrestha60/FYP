@@ -5,6 +5,43 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
 
+// Get all users (admin only)
+router.get('/users', isAdmin, async (req, res) => {
+  try {
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update user status (admin only)
+router.patch('/users/:userId/status', isAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Prevent status change for admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({ message: 'Cannot change status of admin users' });
+    }
+
+    user.status = status;
+    await user.save();
+
+    res.json({ message: 'User status updated successfully', user });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get admin dashboard stats
 router.get('/stats', isAdmin, async (req, res) => {
   try {

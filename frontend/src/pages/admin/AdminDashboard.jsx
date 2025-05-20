@@ -54,7 +54,7 @@ const AdminDashboard = () => {
         />
         <DashboardCard
           title="Revenue"
-          count={`$${stats.revenue.toLocaleString()}`}
+          count={`Rs ${stats.revenue.toLocaleString()}`}
           link="/admin/finance"
           description="Financial overview"
           icon="💰"
