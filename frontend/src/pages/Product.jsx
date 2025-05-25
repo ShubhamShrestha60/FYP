@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { FiHeart } from 'react-icons/fi';
 import LensSelector from '../components/LensSelector/LensSelector';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Product = () => {
   const [showLensSelector, setShowLensSelector] = useState(false);
@@ -13,11 +17,16 @@ const Product = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     fetchProduct();
-  }, [productId]);
+    if (user) {
+      checkIfFavorite();
+    }
+  }, [productId, user]);
 
   const fetchProduct = async () => {
     try {
@@ -30,8 +39,18 @@ const Product = () => {
     }
   };
 
+  const checkIfFavorite = async () => {
+    try {
+      const response = await axios.get('http://localhost:5001/api/users/favorites', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setIsFavorite(response.data.some(fav => fav._id === productId));
+    } catch (error) {
+      console.error('Error checking favorites:', error);
+    }
+  };
+
   const handleAddToCart = () => {
-    // No check needed; allow adding to cart with or without lens options
     const productWithLens = {
       ...product,
       quantity,
@@ -40,7 +59,69 @@ const Product = () => {
     };
     console.log("Adding to cart:", productWithLens);
     addToCart(productWithLens);
-    alert("Product added to cart!");
+    toast.success("Product added to cart!", {
+      position: "top-right",
+      autoClose: 2000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+  };
+
+  const handleFavoriteClick = async () => {
+    if (!user) {
+      toast.error('Please login to add favorites', {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      navigate('/login');
+      return;
+    }
+
+    try {
+      if (isFavorite) {
+        await axios.delete(`http://localhost:5001/api/users/favorites/${productId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setIsFavorite(false);
+        toast.success('Removed from favorites', {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      } else {
+        await axios.post(`http://localhost:5001/api/users/favorites/${productId}`, {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setIsFavorite(true);
+        toast.success('Added to favorites', {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      toast.error('Error updating favorites', {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    }
   };
 
   if (loading) {
@@ -92,9 +173,19 @@ const Product = () => {
 
         {/* Product Details */}
         <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-            <p className="text-xl text-gray-500">{product.brand}</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+              <p className="text-xl text-gray-500">{product.brand}</p>
+            </div>
+            <button
+              onClick={handleFavoriteClick}
+              className={`p-2 rounded-full transition-colors ${
+                isFavorite ? 'text-red-600' : 'text-gray-400 hover:text-red-600'
+              }`}
+            >
+              <FiHeart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
           </div>
 
           <p className="text-2xl font-bold text-red-600">Rs. {product.price}</p>
@@ -118,18 +209,18 @@ const Product = () => {
 
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
-              <label htmlFor="quantity" className="text-sm font-medium">
-                Quantity:
+              <label htmlFor="quantity" className="text-sm font-medium text-gray-700">
+                Quantity
               </label>
               <select
                 id="quantity"
                 value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
-                className="border rounded px-2 py-1"
+                className="rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
               >
-                {[...Array(Math.min(10, product.stock))].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {i + 1}
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <option key={num} value={num}>
+                    {num}
                   </option>
                 ))}
               </select>

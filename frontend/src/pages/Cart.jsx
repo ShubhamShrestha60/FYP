@@ -1,11 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { FiTrash2, FiMinus, FiPlus } from 'react-icons/fi';
+import Pagination from '../components/common/Pagination';
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = cart.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
 
   if (cart.length === 0) {
     return (
@@ -25,7 +37,7 @@ const Cart = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2">
-            {cart.map(item => (
+            {currentItems.map(item => (
               <div key={item._id + JSON.stringify(item.lensOptions)} className="bg-white rounded-lg shadow-md p-6 mb-4">
                 <div className="flex items-center">
                   <img
@@ -94,6 +106,12 @@ const Cart = () => {
             </div>
           </div>
         </div>
+        <Pagination
+          totalItems={cart.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+        />
       </div>
     </div>
   );

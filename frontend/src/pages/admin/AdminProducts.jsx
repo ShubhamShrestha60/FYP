@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import axiosInstance from '../../utils/axios';
+import Pagination from '../../components/common/Pagination';
+import ProductFilter from '../../components/admin/ProductFilter';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -20,12 +22,20 @@ const AdminProducts = () => {
     specifications: {
       frameSize: '',
       frameWidth: '',
-      lensWidth: '',
-      bridgeWidth: '',
-      templeLength: '',
       material: '',
-      gender: 'unisex'
+      gender: 'unisex',
+      frameColor: '',
+      frameShape: ''
     }
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [filters, setFilters] = useState({
+    name: '',
+    brand: '',
+    category: '',
+    minPrice: '',
+    maxPrice: ''
   });
 
   useEffect(() => {
@@ -45,7 +55,6 @@ const AdminProducts = () => {
     }
   };
 
-
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
@@ -58,8 +67,6 @@ const AdminProducts = () => {
       }
     }
   };
-
-
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -118,11 +125,10 @@ const AdminProducts = () => {
       specifications: {
         frameSize: product.specifications?.frameSize || '',
         frameWidth: product.specifications?.frameWidth || '',
-        lensWidth: product.specifications?.lensWidth || '',
-        bridgeWidth: product.specifications?.bridgeWidth || '',
-        templeLength: product.specifications?.templeLength || '',
         material: product.specifications?.material || '',
-        gender: product.specifications?.gender || 'unisex'
+        gender: product.specifications?.gender || 'unisex',
+        frameColor: product.specifications?.frameColor || '',
+        frameShape: product.specifications?.frameShape || ''
       }
     });
     setSelectedProduct(product);
@@ -145,11 +151,10 @@ const AdminProducts = () => {
       specifications: {
         frameSize: formData.specifications?.frameSize || '',
         frameWidth: formData.specifications?.frameWidth || '',
-        lensWidth: formData.specifications?.lensWidth || '',
-        bridgeWidth: formData.specifications?.bridgeWidth || '',
-        templeLength: formData.specifications?.templeLength || '',
         material: formData.specifications?.material || '',
-        gender: formData.specifications?.gender || 'unisex'
+        gender: formData.specifications?.gender || 'unisex',
+        frameColor: formData.specifications?.frameColor || '',
+        frameShape: formData.specifications?.frameShape || ''
       }
     };
 
@@ -220,14 +225,38 @@ const AdminProducts = () => {
       specifications: {
         frameSize: '',
         frameWidth: '',
-        lensWidth: '',
-        bridgeWidth: '',
-        templeLength: '',
         material: '',
-        gender: 'unisex'
+        gender: 'unisex',
+        frameColor: '',
+        frameShape: ''
       }
     });
     setSelectedProduct(null);
+  };
+
+  // Filtering logic
+  const filteredProducts = products.filter(product => {
+    const matchesName = filters.name === '' || product.name.toLowerCase().includes(filters.name.toLowerCase());
+    const matchesBrand = filters.brand === '' || product.brand.toLowerCase().includes(filters.brand.toLowerCase());
+    const matchesCategory = filters.category === '' || product.category.toLowerCase() === filters.category.toLowerCase();
+    const matchesMinPrice = filters.minPrice === '' || product.price >= Number(filters.minPrice);
+    const matchesMaxPrice = filters.maxPrice === '' || product.price <= Number(filters.maxPrice);
+    return matchesName && matchesBrand && matchesCategory && matchesMinPrice && matchesMaxPrice;
+  });
+
+  // Pagination logic (use filteredProducts)
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   return (
@@ -245,6 +274,9 @@ const AdminProducts = () => {
           Add New Product
         </button>
       </div>
+
+      {/* Filter Section */}
+      <ProductFilter filters={filters} onFilterChange={setFilters} />
 
       {showForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
@@ -459,6 +491,41 @@ const AdminProducts = () => {
                     <option value="mixed">Mixed Materials</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Frame Color</label>
+                  <select
+                    name="spec_frameColor"
+                    value={formData.specifications.frameColor}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                  >
+                    <option value="">Select Color</option>
+                    <option value="Black">Black</option>
+                    <option value="Gold">Gold</option>
+                    <option value="Silver">Silver</option>
+                    <option value="Brown">Brown</option>
+                    <option value="Blue">Blue</option>
+                    <option value="Green">Green</option>
+                    <option value="Pink">Pink</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Frame Shape</label>
+                  <select
+                    name="spec_frameShape"
+                    value={formData.specifications.frameShape}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                  >
+                    <option value="">Select Shape</option>
+                    <option value="Aviator">Aviator</option>
+                    <option value="Round">Round</option>
+                    <option value="Square">Square</option>
+                    <option value="Rectangle">Rectangle</option>
+                    <option value="Cat Eye">Cat Eye</option>
+                    <option value="Oval">Oval</option>
+                  </select>
+                </div>
               </div>
 
               {/* Submit Buttons */}
@@ -514,14 +581,14 @@ const AdminProducts = () => {
                   Loading...
                 </td>
               </tr>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-4 text-center">
                   No products found
                 </td>
               </tr>
             ) : (
-              products.map((product) => (
+              currentItems.map((product) => (
                 <tr key={product._id}>
                   <td className="px-6 py-4">
                     <div className="flex items-center">
@@ -571,6 +638,14 @@ const AdminProducts = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={filteredProducts.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 };

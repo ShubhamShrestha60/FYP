@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
+import Pagination from '../../components/common/Pagination';
+import OrderFilter from '../../components/admin/OrderFilter';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -17,20 +19,49 @@ const AdminOrders = () => {
     reason: '',
     notes: ''
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    customer: '',
+    orderId: '',
+    dateFrom: '',
+    dateTo: '',
+    minTotal: '',
+    maxTotal: ''
+  });
 
   useEffect(() => {
-    fetchOrders();
-  }, [filterStatus]);
+    fetchOrders(currentPage, filters);
+    // eslint-disable-next-line
+  }, [filters, currentPage]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = 1, filtersObj = filters) => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:5001/api/orders/admin/orders', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        }
+      const params = new URLSearchParams({
+        page,
+        limit: itemsPerPage,
+        status: filtersObj.status,
+        customer: filtersObj.customer,
+        orderId: filtersObj.orderId,
+        dateFrom: filtersObj.dateFrom,
+        dateTo: filtersObj.dateTo,
+        minTotal: filtersObj.minTotal,
+        maxTotal: filtersObj.maxTotal
       });
+      const response = await axios.get(`http://localhost:5001/api/orders/admin/orders?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+          }
+        }
+      );
       setOrders(response.data.orders);
+      setTotalOrders(response.data.total);
+      setTotalPages(response.data.totalPages);
     } catch (error) {
       toast.error('Failed to fetch orders');
     } finally {
@@ -139,13 +170,19 @@ const AdminOrders = () => {
     }
   };
 
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Orders Management</h1>
+      {/* Order Filter Section */}
+      <OrderFilter filters={filters} onFilterChange={(newFilters) => { setFilters(newFilters); setCurrentPage(1); }} />
       <div className="flex justify-between items-center">
         <select
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+          onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
           className="border rounded-md p-2"
         >
           <option value="all">All Orders</option>
@@ -240,6 +277,14 @@ const AdminOrders = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={totalOrders}
+        itemsPerPage={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
 
       {/* Status Update Modal */}
       {statusModal.show && statusModal.order && (

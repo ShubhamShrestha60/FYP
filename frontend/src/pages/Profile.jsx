@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FiUser, FiShoppingBag, FiEye, FiSettings, FiLogOut, FiCalendar } from 'react-icons/fi';
+import { FiUser, FiShoppingBag, FiEye, FiSettings, FiLogOut, FiCalendar, FiLock, FiChevronDown } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import UserAppointments from '../components/UserAppointments';
 import axios from 'axios';
@@ -14,12 +14,24 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'prescriptions') {
       fetchPrescriptions();
     }
-  }, [activeTab]);
+    setEditName(user?.name || '');
+    setEditPhone(user?.phone || '');
+  }, [activeTab, user]);
 
   const fetchPrescriptions = async () => {
     setLoading(true);
@@ -41,6 +53,101 @@ const Profile = () => {
     navigate('/login');
   };
 
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (!minLength) return "Password must be at least 8 characters long";
+    if (!hasUpperCase) return "Password must contain at least one uppercase letter";
+    if (!hasLowerCase) return "Password must contain at least one lowercase letter";
+    if (!hasNumbers) return "Password must contain at least one number";
+    if (!hasSpecialChar) return "Password must contain at least one special character";
+    
+    return "";
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    setLoading(true);
+
+    try {
+      // Validate passwords match
+      if (newPassword !== confirmPassword) {
+        throw new Error("New passwords do not match");
+      }
+
+      // Validate password strength
+      const passwordError = validatePassword(newPassword);
+      if (passwordError) {
+        throw new Error(passwordError);
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/change-password`,
+        {
+          currentPassword,
+          newPassword
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+
+      if (response.data.success) {
+        setPasswordSuccess('Password changed successfully');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (error) {
+      setPasswordError(error.response?.data?.message || error.message || "Failed to change password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setProfileLoading(true);
+    try {
+      const response = await axios.put(
+        `${API_BASE_URL}/auth/profile`,
+        { name: editName, phone: editPhone },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      if (response.data.success) {
+        toast.success('Profile updated successfully');
+        if (typeof user === 'object') {
+          user.name = response.data.user.name;
+          user.phone = response.data.user.phone;
+        }
+        setIsEditing(false);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete (disable) your account?')) return;
+    try {
+      await axios.post(`${API_BASE_URL}/auth/disable-account`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert('Your account has been disabled.');
+      logout();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to disable account');
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
@@ -48,18 +155,68 @@ const Profile = () => {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-2xl font-semibold mb-4">Profile Information</h2>
             <div className="space-y-4">
-              <div>
-                <label className="text-gray-600">Name</label>
-                <p className="font-medium">{user?.name}</p>
-              </div>
-              <div>
-                <label className="text-gray-600">Email</label>
-                <p className="font-medium">{user?.email}</p>
-              </div>
-              <div>
-                <label className="text-gray-600">Phone</label>
-                <p className="font-medium">{user?.phone}</p>
-              </div>
+              {isEditing ? (
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                  <div>
+                    <label className="text-gray-600">Name</label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-600">Phone</label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                      value={editPhone}
+                      onChange={e => setEditPhone(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                      disabled={profileLoading}
+                    >
+                      {profileLoading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                      onClick={() => setIsEditing(false)}
+                      disabled={profileLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-gray-600">Name</label>
+                    <p className="font-medium">{user?.name}</p>
+                  </div>
+                  <div>
+                    <label className="text-gray-600">Email</label>
+                    <p className="font-medium">{user?.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-gray-600">Phone</label>
+                    <p className="font-medium">{user?.phone}</p>
+                  </div>
+                  <button
+                    className="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    Edit
+                  </button>
+                </>
+              )}
             </div>
           </div>
         );
@@ -147,8 +304,94 @@ const Profile = () => {
       case 'settings':
         return (
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">Account Settings</h2>
-            {/* Add settings form here */}
+            <h2 className="text-2xl font-semibold mb-6">Account Settings</h2>
+            
+            {/* Change Password Section */}
+            <div className="border rounded-lg overflow-hidden mb-6">
+              <button
+                onClick={() => setShowPasswordSection(!showPasswordSection)}
+                className="w-full px-4 py-3 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <FiLock className="w-5 h-5" />
+                  <span className="font-medium">Change Password</span>
+                </div>
+                <FiChevronDown className={`w-5 h-5 transform transition-transform ${showPasswordSection ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showPasswordSection && (
+                <div className="p-4 border-t">
+                  <form onSubmit={handlePasswordChange} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Current Password</label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                        required
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Password must contain:
+                      <ul className="list-disc list-inside">
+                        <li>At least 8 characters</li>
+                        <li>One uppercase letter</li>
+                        <li>One lowercase letter</li>
+                        <li>One number</li>
+                        <li>One special character</li>
+                      </ul>
+                    </div>
+                    {passwordError && (
+                      <p className="text-red-600 text-sm">{passwordError}</p>
+                    )}
+                    {passwordSuccess && (
+                      <p className="text-green-600 text-sm">{passwordSuccess}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
+                        loading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {loading ? 'Changing Password...' : 'Change Password'}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+            {/* Delete Account Section */}
+            <div className="border rounded-lg overflow-hidden">
+              <button
+                onClick={handleDeleteAccount}
+                className="w-full px-4 py-3 flex items-center gap-2 text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <FiLock className="w-5 h-5" />
+                <span className="font-medium">Delete Account</span>
+              </button>
+              <p className="text-xs text-gray-500 p-4">This will disable your account. You can reactivate it later by logging in again.</p>
+            </div>
           </div>
         );
       default:

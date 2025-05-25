@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import ProductNav from './ProductNav';
 import ProductCard from '../components/ProductCard';
 import axios from 'axios';
+import Pagination from '../components/common/Pagination';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -11,6 +12,8 @@ const ContactLens = () => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -67,6 +70,15 @@ const ContactLens = () => {
     setFilteredProducts(filtered);
   }, [searchParams, products]);
 
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
   }
@@ -76,10 +88,16 @@ const ContactLens = () => {
       <ProductNav />
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map(product => (
+          {currentItems.map(product => (
             <ProductCard key={product._id} product={product} />
           ))}
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredProducts.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+        />
         {filteredProducts.length === 0 && (
           <div className="text-center py-10">
             <p className="text-gray-500">No products match your selected filters.</p>

@@ -54,7 +54,7 @@ const LensPricingDisplay = ({
   const handleConfirm = () => {
     if (!selectedCoating || !prices) return;
     
-    const priceKey = selectedCoating.toLowerCase().replace(' ', '_');
+    const priceKey = selectedCoating.toLowerCase().replace(/ /g, '_');
     const totalPrice = prices[priceKey];
     
     onConfirm({

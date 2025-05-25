@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { FiFilter } from 'react-icons/fi';
+import axios from 'axios';
 
 function ProductNav() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [order, setOrder] = useState(searchParams.get("order") || "");
   const [showFilters, setShowFilters] = useState(false);
   const location = useLocation();
+  const [dynamicBrands, setDynamicBrands] = useState([]);
   
   // Get filter values from URL params
   const selectedColors = searchParams.getAll("color");
@@ -16,10 +18,16 @@ function ProductNav() {
   const selectedMaterials = searchParams.getAll("material");
   const priceRange = searchParams.get("price") || "all";
 
+  useEffect(() => {
+    // Fetch dynamic brands from backend
+    axios.get('http://localhost:5001/api/products/brands')
+      .then(res => setDynamicBrands(res.data))
+      .catch(() => setDynamicBrands([]));
+  }, []);
+
   // Updated price ranges for Nepali Rupees
   const filterOptions = {
     colors: ["Black", "Gold", "Silver", "Brown", "Blue", "Green", "Pink"],
-    brands: ["Ray-Ban", "Oakley", "Gucci", "Prada", "Tom Ford", "Persol"],
     shapes: ["Aviator", "Round", "Square", "Rectangle", "Cat Eye", "Oval"],
     sizes: ["Small", "Medium", "Large", "Extra Large"],
     materials: ["Metal", "Plastic", "Acetate", "Titanium"],
@@ -127,7 +135,7 @@ function ProductNav() {
             {/* Brands */}
             <div className="mb-6">
               <h3 className="font-semibold mb-3">Brands</h3>
-              {filterOptions.brands.map(brand => (
+              {dynamicBrands.map(brand => (
                 <div key={brand} className="mb-2">
                   <label className="flex items-center">
                     <input

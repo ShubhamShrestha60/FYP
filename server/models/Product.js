@@ -43,15 +43,14 @@ const productSchema = new mongoose.Schema({
   specifications: {
     frameSize: String,
     frameWidth: String,
-    lensWidth: String,
-    bridgeWidth: String,
-    templeLength: String,
     material: String,
     gender: {
       type: String,
       enum: ['men', 'women', 'unisex', 'kids'],
       default: 'unisex'
-    }
+    },
+    frameColor: String,
+    frameShape: String
   },
   createdAt: {
     type: Date,

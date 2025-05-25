@@ -16,12 +16,25 @@ import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import PaymentSuccess from './pages/PaymentSuccess';
 import Orders from './pages/Orders';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   return (
     <CartProvider>
       <AuthProvider>
         <ProductProvider>
+          <ToastContainer
+            position="top-right"
+            autoClose={2000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
           <Routes>
             {/* Admin Routes should come first */}
             <Route path="/admin/*" element={<AdminRoutes />} />

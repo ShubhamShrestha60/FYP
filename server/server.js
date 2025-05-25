@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -13,8 +14,7 @@ const khaltiRoutes = require('./routes/payment/khaltiRoutes');
 const lensRoutes = require('./routes/lensRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
-
-dotenv.config();
+const userRoutes = require('./routes/user');
 
 const app = express();
 
@@ -40,6 +40,7 @@ app.use('/api/payment/khalti', khaltiRoutes);
 app.use('/api/lens', lensRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/users', userRoutes);
 
 // Add this after your routes are registered
 app.use((req, res, next) => {

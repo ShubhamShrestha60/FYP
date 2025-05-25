@@ -3,7 +3,11 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { FiUpload } from 'react-icons/fi';
+import { FiUpload, FiSearch } from 'react-icons/fi';
+import Pagination from '../components/common/Pagination';
+import PrescriptionSearch from '../components/prescriptions/PrescriptionSearch';
+import PrescriptionFilter from '../components/prescriptions/PrescriptionFilter';
+import { filterPrescriptions, getPaginatedItems } from '../utils/prescriptionUtils';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -12,6 +16,14 @@ const Prescription = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [savedPrescriptions, setSavedPrescriptions] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    prescriptionType: '',
+    status: '',
+    dateRange: ''
+  });
+  const itemsPerPage = 5;
   const [prescription, setPrescription] = useState({
     patientName: '',
     rightEye: {
@@ -433,6 +445,21 @@ const Prescription = () => {
     );
   };
 
+  // Filter prescriptions based on search term and filters
+  const filteredPrescriptions = filterPrescriptions(savedPrescriptions, searchTerm, filters);
+
+  // Get paginated items
+  const { currentItems, totalPages } = getPaginatedItems(filteredPrescriptions, currentPage, itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  // Reset to first page when search term or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Enter Your Prescription</h1>
@@ -672,7 +699,21 @@ const Prescription = () => {
       {/* Display Saved Prescriptions */}
       {savedPrescriptions.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Your Prescriptions</h2>
+          <div className="flex flex-col space-y-4 mb-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Your Prescriptions</h2>
+              <div className="w-64">
+                <PrescriptionSearch
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                />
+              </div>
+            </div>
+            <PrescriptionFilter
+              filters={filters}
+              onFilterChange={setFilters}
+            />
+          </div>
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
             <div className="flex">
               <div className="flex-shrink-0">
@@ -687,9 +728,27 @@ const Prescription = () => {
               </div>
             </div>
           </div>
-          <div className="grid gap-6">
-            {savedPrescriptions.map(renderPrescriptionCard)}
-          </div>
+          {filteredPrescriptions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {searchTerm || Object.values(filters).some(Boolean) 
+                ? 'No prescriptions found matching your criteria.' 
+                : 'No prescriptions found.'}
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-6">
+                {currentItems.map(renderPrescriptionCard)}
+              </div>
+              <div className="mt-6">
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={filteredPrescriptions.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

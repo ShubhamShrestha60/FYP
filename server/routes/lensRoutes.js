@@ -32,7 +32,7 @@ router.post('/calculate-prices', async (req, res) => {
                 price = addition > 3 ? lens.progressiveIncreasedPrice : lens.progressiveBasePrice;
             }
 
-            const key = lens.coating.toLowerCase().replace(' ', '_');
+            const key = lens.coating.toLowerCase().replace(/ /g, '_');
             prices[key] = price;
         });
 

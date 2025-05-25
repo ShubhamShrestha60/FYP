@@ -9,9 +9,10 @@ const adminRoutes = require('./routes/adminRoutes');
 const khaltiRoutes = require('./routes/payment/khaltiRoutes');
 const lensRoutes = require('./routes/lens');
 const comparisonRoutes = require('./routes/comparisonRoutes');
-const userRoutes = require('./routes/users');
+const userRoutes = require('./routes/user');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
+dotenv.config();
 
 const app = express();
 
@@ -38,11 +39,11 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/lens', lensRoutes);
-app.use('/api/comparison', comparisonRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/payment/khalti', khaltiRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/doctors', doctorRoutes);
+app.use('/api/payment/khalti', khaltiRoutes);
+app.use('/api/comparison', comparisonRoutes);
 
 // 404 handler
 app.use((req, res) => {

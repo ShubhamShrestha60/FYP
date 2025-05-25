@@ -21,13 +21,18 @@ import Payment from "../Products/Payment";
 import Profile from "../pages/Profile";
 import Appointment from "../pages/Appointment";
 import DoctorManagement from "../components/admin/DoctorManagement";
+import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
+import Favorites from "../pages/Favorites";
 
 import AdminPrescriptions from '../pages/admin/AdminPrescriptions';
 import AdminDashboard from "../components/admin/AdminDashboard";
 import AdminLogin from "../pages/admin/AdminLogin";
 import LensSelection from "../pages/LensSelection";
+import SearchResults from "../pages/SearchResults";
 
 import { useAuth } from "../context/AuthContext";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 
 //For admin part 
 
@@ -46,6 +51,8 @@ const AllRoutes = () => {
       <Route path="/cart" element={<Cart />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/place-order" element={<PlaceOrder />} />
       <Route path="/orders" element={<Orders />} />
       <Route path="/sunglasses" element={<Sunglasses />} />
@@ -59,6 +66,12 @@ const AllRoutes = () => {
       <Route path='/payment' element={<Payment/>}/>
       <Route path="/profile" element={<Profile />} />
       <Route path="/appointment" element={<Appointment />} />
+      <Route path="/search" element={<SearchResults />} />
+      <Route path="/favorites" element={
+        <ProtectedRoute>
+          <Favorites />
+        </ProtectedRoute>
+      } />
       
       <Route path="/admin" element={adminUser ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
       <Route path="/admin/login" element={<AdminLogin />} />

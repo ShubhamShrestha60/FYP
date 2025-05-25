@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
+import { filterPrescriptions } from '../../utils/prescriptionUtils';
+import PrescriptionFilter from '../../components/prescriptions/PrescriptionFilter';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -12,6 +14,13 @@ const AdminPrescriptions = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [verificationNotes, setVerificationNotes] = useState('');
+  const [filters, setFilters] = useState({
+    prescriptionType: '',
+    status: '',
+    dateRange: ''
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchPrescriptions();
@@ -52,13 +61,23 @@ const AdminPrescriptions = () => {
     }
   };
 
-  const filteredPrescriptions = prescriptions
-    .filter(p => filter === 'all' || p.status === filter)
-    .filter(p => 
-      searchTerm === '' || 
-      p.userId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.userId?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  // Filter prescriptions using utility
+  const filteredPrescriptions = filterPrescriptions(
+    prescriptions,
+    searchTerm,
+    filters
+  );
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredPrescriptions.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredPrescriptions.length / itemsPerPage);
+
+  // Reset to first page when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchTerm]);
 
   // Table view for prescriptions list
   const PrescriptionsList = () => (
@@ -66,7 +85,7 @@ const AdminPrescriptions = () => {
       <table className="min-w-full bg-white">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Name</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -74,7 +93,7 @@ const AdminPrescriptions = () => {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {filteredPrescriptions.map(p => (
+          {currentItems.map(p => (
             <tr key={p._id} className="hover:bg-gray-50">
               <td className="px-6 py-4">
                 <div className="text-sm font-medium text-gray-900">{p.userId?.name || 'N/A'}</div>
@@ -126,6 +145,13 @@ const AdminPrescriptions = () => {
               >
                 ✕
               </button>
+            </div>
+
+            {/* Patient Info */}
+            <div className="mb-6">
+              <div className="text-base font-semibold text-gray-800">Patient Name: <span className="font-normal">{selectedPrescription.patientName || 'N/A'}</span></div>
+              <div className="text-sm text-gray-600">User Name: {selectedPrescription.userId?.name || 'N/A'}</div>
+              <div className="text-sm text-gray-600">Email: {selectedPrescription.userId?.email || 'N/A'}</div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
@@ -232,16 +258,7 @@ const AdminPrescriptions = () => {
         {/* Filters and Search */}
         <div className="flex flex-wrap gap-4 items-center mb-6">
           <div className="flex items-center space-x-4">
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            <PrescriptionFilter filters={filters} onFilterChange={setFilters} />
             <input
               type="text"
               placeholder="Search by patient name or email..."
@@ -265,6 +282,18 @@ const AdminPrescriptions = () => {
         </div>
       ) : (
         <PrescriptionsList />
+      )}
+
+      {/* Pagination */}
+      {filteredPrescriptions.length > itemsPerPage && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredPrescriptions.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       )}
 
       {/* Detail Modal */}

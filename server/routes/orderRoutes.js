@@ -3,6 +3,7 @@ const router = express.Router();
 const Order = require('../models/Order');
 const { auth, isAdmin } = require('../middleware/auth');
 const { sendOrderStatusEmail } = require('../services/emailService');
+const generateInvoicePdf = require('../utils/generateInvoicePdf');
 
 // Debug middleware
 router.use((req, res, next) => {
@@ -47,6 +48,27 @@ router.get('/my-orders', auth, async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Generate and serve invoice PDF for an order
+router.get('/:orderId/invoice', async (req, res) => {
+  const orderId = req.params.orderId;
+  console.log('Invoice requested for orderId:', orderId);
+  try {
+    const order = await Order.findById(orderId).populate('items.product');
+    if (!order) {
+      console.log('Order not found for orderId:', orderId);
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    console.log('Order found, generating PDF for orderId:', orderId);
+    const pdfBuffer = await generateInvoicePdf(order);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order._id}.pdf`);
+    res.end(pdfBuffer);
+  } catch (error) {
+    console.error('Error generating invoice for orderId:', orderId, error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -236,6 +258,12 @@ router.get('/admin/orders/:orderId/history', isAdmin, async (req, res) => {
     console.error('Error fetching order history:', error);
     res.status(500).json({ message: 'Error fetching order history' });
   }
+});
+
+// Catch-all route for debugging
+router.use('*', (req, res) => {
+  console.log('Unmatched route accessed:', req.method, req.originalUrl);
+  res.status(404).json({ message: 'Route not found' });
 });
 
 module.exports = router; 

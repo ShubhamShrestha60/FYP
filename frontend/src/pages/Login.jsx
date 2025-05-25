@@ -13,6 +13,8 @@ const Login = () => {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [reactivatePrompt, setReactivatePrompt] = useState(false);
+  const [reactivateLoading, setReactivateLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -25,23 +27,40 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
+    setReactivatePrompt(false);
     try {
       const response = await axios.post("http://localhost:5001/api/auth/login", formData);
-      
       if (response.data.success) {
         localStorage.setItem("token", response.data.token);
         await login(formData.email, formData.password);
         navigate("/");
       }
     } catch (error) {
-      console.error("Login error:", error);
-      setError(
-        error.response?.data?.message || 
-        "Invalid email or password"
-      );
+      if (error.response?.data?.can_reactivate) {
+        setReactivatePrompt(true);
+        setError(error.response.data.message);
+      } else {
+        setError(
+          error.response?.data?.message || 
+          "Invalid email or password"
+        );
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setReactivateLoading(true);
+    setError("");
+    try {
+      await axios.post("http://localhost:5001/api/auth/reactivate-account", { email: formData.email });
+      setReactivatePrompt(false);
+      setError("Account reactivated. Please log in again.");
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to reactivate account");
+    } finally {
+      setReactivateLoading(false);
     }
   };
 
@@ -71,6 +90,18 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <p className="text-red-600 text-sm text-center">{error}</p>
+          )}
+          {reactivatePrompt && (
+            <div className="text-center mb-2">
+              <button
+                type="button"
+                onClick={handleReactivate}
+                disabled={reactivateLoading}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              >
+                {reactivateLoading ? 'Reactivating...' : 'Reactivate Account'}
+              </button>
+            </div>
           )}
 
           <div>
@@ -105,12 +136,17 @@ const Login = () => {
             {loading ? "Logging in..." : "Login"}
           </button>
 
-          <p className="text-center text-sm text-gray-600">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-red-600 hover:text-red-700">
-              Sign up
+          <div className="flex justify-between items-center text-sm">
+            <p className="text-gray-600">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-red-600 hover:text-red-700">
+                Sign up
+              </Link>
+            </p>
+            <Link to="/forgot-password" className="text-red-600 hover:text-red-700">
+              Forgot Password?
             </Link>
-          </p>
+          </div>
         </form>
       </div>
     </div>

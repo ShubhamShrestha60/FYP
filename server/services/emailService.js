@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 
+// Create reusable transporter object using SMTP transport
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
@@ -7,6 +8,19 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
+  },
+  tls: {
+    // Do not fail on invalid certs
+    rejectUnauthorized: false
+  }
+});
+
+// Verify transporter configuration
+transporter.verify(function(error, success) {
+  if (error) {
+    console.error('SMTP Configuration Error:', error);
+  } else {
+    console.log('SMTP Server is ready to take our messages');
   }
 });
 
@@ -212,9 +226,99 @@ const sendOrderStatusEmail = async (data) => {
   }
 };
 
+const sendVerificationEmail = async (userEmail, userName, verificationCode) => {
+  const mailOptions = {
+    from: `"Opera Eye Wear" <${process.env.EMAIL_USER}>`,
+    to: userEmail,
+    subject: 'Verify Your Email - Opera Eye Wear',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="${process.env.SITE_URL}/logo.png" alt="Opera Eye Wear" style="max-width: 200px;">
+        </div>
+
+        <div style="background-color: #F9FAFB; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="color: #111827; margin: 0 0 10px 0;">Verify Your Email</h2>
+          <p style="color: #4B5563; margin: 0;">Dear ${userName},</p>
+        </div>
+
+        <div style="background-color: #F9FAFB; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <p style="margin: 5px 0;">Thank you for signing up with Opera Eye Wear! To complete your registration, please use the following verification code:</p>
+          <div style="background-color: #EFF6FF; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center;">
+            <h3 style="color: #1E40AF; margin: 0; font-size: 24px; letter-spacing: 2px;">${verificationCode}</h3>
+          </div>
+          <p style="margin: 5px 0;">This code will expire in 10 minutes.</p>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; text-align: center; color: #6B7280; font-size: 14px;">
+          <p>If you didn't create this account, please ignore this email.</p>
+          <p>© ${new Date().getFullYear()} Opera Eye Wear. All rights reserved.</p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Verification email sent to ${userEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    return false;
+  }
+};
+
+const sendPasswordResetEmail = async (userEmail, userName, resetToken) => {
+  const resetUrl = `${process.env.SITE_URL}/reset-password?token=${resetToken}`;
+  
+  const mailOptions = {
+    from: `"Opera Eye Wear" <${process.env.EMAIL_USER}>`,
+    to: userEmail,
+    subject: 'Reset Your Password - Opera Eye Wear',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="${process.env.SITE_URL}/logo.png" alt="Opera Eye Wear" style="max-width: 200px;">
+        </div>
+
+        <div style="background-color: #F9FAFB; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="color: #111827; margin: 0 0 10px 0;">Reset Your Password</h2>
+          <p style="color: #4B5563; margin: 0;">Dear ${userName},</p>
+        </div>
+
+        <div style="background-color: #F9FAFB; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <p style="margin: 5px 0;">We received a request to reset your password. Click the button below to reset your password:</p>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${resetUrl}" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+              Reset Password
+            </a>
+          </div>
+          <p style="margin: 5px 0;">This link will expire in 1 hour.</p>
+          <p style="margin: 5px 0;">If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; text-align: center; color: #6B7280; font-size: 14px;">
+          <p>© ${new Date().getFullYear()} Opera Eye Wear. All rights reserved.</p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Password reset email sent to ${userEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendDoctorNotification,
   sendPatientConfirmation,
   sendPrescriptionStatusNotification,
-  sendOrderStatusEmail
+  sendOrderStatusEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail
 };

@@ -4,6 +4,7 @@ import { FiFilter, FiHeart, FiShoppingCart } from 'react-icons/fi';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/config';
 import { Link } from 'react-router-dom';
+import Pagination from '../components/common/Pagination';
 
 const Collection = () => {
   const [products, setProducts] = useState([]);
@@ -16,6 +17,8 @@ const Collection = () => {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState('featured');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     fetchProducts();
@@ -59,6 +62,15 @@ const Collection = () => {
   };
 
   const filteredAndSortedProducts = sortProducts(filterProducts(products));
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredAndSortedProducts.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -154,7 +166,7 @@ const Collection = () => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredAndSortedProducts.map((product) => (
+          {currentItems.map((product) => (
             <Link 
               to={`/product/${product._id}`}
               key={product._id}
@@ -202,6 +214,14 @@ const Collection = () => {
             </Link>
           ))}
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredAndSortedProducts.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+        />
       </div>
     </div>
   );

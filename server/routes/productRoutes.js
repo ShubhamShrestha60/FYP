@@ -14,6 +14,45 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Search products across all categories
+router.get('/search', async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
+    // Create a case-insensitive search regex
+    const searchRegex = new RegExp(query, 'i');
+
+    // Search in name, brand, and description
+    const products = await Product.find({
+      $or: [
+        { name: searchRegex },
+        { brand: searchRegex },
+        { description: searchRegex }
+      ]
+    }).sort({ createdAt: -1 });
+
+    res.json(products);
+  } catch (error) {
+    console.error('Search error:', error);
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all unique brands
+router.get('/brands', async (req, res) => {
+  try {
+    const brands = await Product.distinct('brand');
+    res.json(brands);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch brands' });
+  }
+});
+
 // Get single product
 router.get('/:id', async (req, res) => {
   try {

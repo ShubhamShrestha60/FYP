@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import ProductNav from './ProductNav';
 import ProductCard from '../components/ProductCard';
 import axios from 'axios';
+import Pagination from '../components/common/Pagination';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -12,6 +13,8 @@ const Sunglasses = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGender, setSelectedGender] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -43,19 +46,25 @@ const Sunglasses = () => {
     
     const selectedBrands = searchParams.getAll("brand");
     const selectedMaterials = searchParams.getAll("material");
+    const selectedColors = searchParams.getAll("color");
+    const selectedShapes = searchParams.getAll("shape");
     const priceRange = searchParams.get("price");
     const order = searchParams.get("order");
 
     if (selectedBrands.length) {
       filtered = filtered.filter(product => selectedBrands.includes(product.brand));
     }
-
+    if (selectedColors.length) {
+      filtered = filtered.filter(product => selectedColors.includes(product.specifications.frameColor));
+    }
+    if (selectedShapes.length) {
+      filtered = filtered.filter(product => selectedShapes.includes(product.specifications.frameShape));
+    }
     if (selectedMaterials.length) {
-      filtered = filtered.filter(product => 
-        selectedMaterials.includes(product.specifications.material)
+      filtered = filtered.filter(product =>
+        selectedMaterials.map(m => m.toLowerCase()).includes(product.specifications?.material?.toLowerCase())
       );
     }
-
     if (priceRange && priceRange !== 'all') {
       const [min, max] = priceRange.split('-').map(Number);
       filtered = filtered.filter(product => {
@@ -66,7 +75,6 @@ const Sunglasses = () => {
         }
       });
     }
-
     if (order) {
       filtered.sort((a, b) => {
         if (order === 'asc') {
@@ -79,10 +87,20 @@ const Sunglasses = () => {
     }
 
     setFilteredProducts(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [searchParams, products, selectedGender]);
 
   const handleGenderFilter = (gender) => {
     setSelectedGender(gender);
+  };
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   if (loading) {
@@ -164,14 +182,23 @@ const Sunglasses = () => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map(product => (
+          {currentItems.map(product => (
             <ProductCard key={product._id} product={product} />
           ))}
         </div>
         
-        {filteredProducts.length === 0 && (
+        {filteredProducts.length === 0 ? (
           <div className="text-center py-10">
             <p className="text-gray-500">No sunglasses found matching your criteria.</p>
+          </div>
+        ) : (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredProducts.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </div>
