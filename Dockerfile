@@ -1,8 +1,8 @@
 # Build frontend
-FROM node:18-alpine as frontend-build
+FROM node:18.17-alpine as frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY frontend/ .
 RUN npm run build
 
@@ -37,11 +37,11 @@ COPY py_backend/ .
 # Setup Node backend
 WORKDIR /app/server
 COPY server/package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY server/ .
 
 # Copy built frontend and nginx config
-COPY --from=frontend-build /app/frontend/build /usr/share/nginx/html
+COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy start script
