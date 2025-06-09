@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { filterPrescriptions } from '../../utils/prescriptionUtils';
+import Pagination from '../../components/common/Pagination';
 import PrescriptionFilter from '../../components/prescriptions/PrescriptionFilter';
 
 const API_BASE_URL = 'http://localhost:5001/api';

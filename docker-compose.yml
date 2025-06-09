@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - node-backend
+      - python-backend
+
+  node-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PYTHON_SERVICE_URL=http://python-backend:5001
+    volumes:
+      - ./server:/app/server
+      - /app/server/node_modules
+
+  python-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./py_backend:/app/python
+
+networks:
+  default:
+    driver: bridge 
