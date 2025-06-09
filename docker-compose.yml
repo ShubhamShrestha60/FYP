@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     ports:
-      - "80:80"
+      - "${PORT:-80}:80"
     depends_on:
       - node-backend
       - python-backend
@@ -15,11 +15,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.node
-    ports:
-      - "5000:5000"
     environment:
       - NODE_ENV=production
       - PYTHON_SERVICE_URL=http://python-backend:5001
+      - PORT=5000
     volumes:
       - ./server:/app/server
       - /app/server/node_modules
@@ -28,8 +27,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.python
-    ports:
-      - "5001:5001"
+    environment:
+      - PORT=5001
     volumes:
       - ./py_backend:/app/python
 
